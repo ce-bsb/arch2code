@@ -1,0 +1,269 @@
+{
+  "components": [
+    {
+      "id": "ai_chat",
+      "name": "AI CHAT",
+      "kind": "service",
+      "tech": null,
+      "responsibilities": [],
+      "confidence": 0.9,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.058,
+          0.227,
+          0.108,
+          0.319
+        ],
+        "label_text": "AI CHAT"
+      }
+    },
+    {
+      "id": "portfolio_agent",
+      "name": "Portfolio Agent",
+      "kind": "service",
+      "tech": null,
+      "responsibilities": [],
+      "confidence": 0.9,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.138,
+          0.227,
+          0.228,
+          0.358
+        ],
+        "label_text": "Portfolio Agent"
+      }
+    },
+    {
+      "id": "recommendation_agent",
+      "name": "Recomendation Agent",
+      "kind": "service",
+      "tech": null,
+      "responsibilities": [],
+      "confidence": 0.9,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.432,
+          0.259,
+          0.541,
+          0.358
+        ],
+        "label_text": "Recomendation Agent"
+      }
+    },
+    {
+      "id": "notification_agent",
+      "name": "Notification Agent",
+      "kind": "service",
+      "tech": null,
+      "responsibilities": [],
+      "confidence": 0.9,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.734,
+          0.244,
+          0.824,
+          0.358
+        ],
+        "label_text": "Notification Agent"
+      }
+    },
+    {
+      "id": "rag",
+      "name": "RAG",
+      "kind": "service",
+      "tech": null,
+      "responsibilities": [],
+      "confidence": 0.9,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.754,
+          0.783,
+          0.844,
+          0.897
+        ],
+        "label_text": "RAG"
+      }
+    },
+    {
+      "id": "watsonx_orchestrate",
+      "name": "watsonx.orchestrate",
+      "kind": "unknown",
+      "tech": null,
+      "responsibilities": [],
+      "confidence": 0.7,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.017,
+          0.022,
+          0.206,
+          0.091
+        ],
+        "label_text": "watsonx.orchestrate"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "ai_chat_to_portfolio_agent",
+      "from": "ai_chat",
+      "to": "portfolio_agent",
+      "protocol": "unknown",
+      "sync": "sync",
+      "label": "QUERY",
+      "payload": null,
+      "confidence": 0.9,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.108,
+          0.277,
+          0.138,
+          0.308
+        ],
+        "label_text": "QUERY"
+      }
+    },
+    {
+      "id": "portfolio_agent_to_recommendation_agent",
+      "from": "portfolio_agent",
+      "to": "recommendation_agent",
+      "protocol": "unknown",
+      "sync": "sync",
+      "label": null,
+      "payload": null,
+      "confidence": 0.9,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.228,
+          0.292,
+          0.432,
+          0.323
+        ],
+        "label_text": null
+      }
+    },
+    {
+      "id": "recommendation_agent_to_notification_agent",
+      "from": "recommendation_agent",
+      "to": "notification_agent",
+      "protocol": "unknown",
+      "sync": "sync",
+      "label": null,
+      "payload": null,
+      "confidence": 0.9,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.541,
+          0.292,
+          0.734,
+          0.323
+        ],
+        "label_text": null
+      }
+    },
+    {
+      "id": "external_sources_to_rag",
+      "from": "external_sources",
+      "to": "rag",
+      "protocol": "unknown",
+      "sync": "sync",
+      "label": null,
+      "payload": null,
+      "confidence": 0.8,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.833,
+          0.678,
+          0.754,
+          0.809
+        ],
+        "label_text": null
+      }
+    },
+    {
+      "id": "ghost_edge",
+      "from": "portfolio_agent",
+      "to": "nonexistent_service",
+      "protocol": "unknown",
+      "sync": "unknown",
+      "label": null,
+      "payload": null,
+      "confidence": 0.42,
+      "evidence": {
+        "kind": "bbox",
+        "value": [
+          0.3,
+          0.9,
+          1.4,
+          1.05
+        ],
+        "label_text": null
+      }
+    }
+  ],
+  "boundaries": [
+    {
+      "id": "watsonx_orchestrate_boundary",
+      "name": "watsonx.orchestrate",
+      "kind": "logical",
+      "contains": [
+        "ai_chat",
+        "portfolio_agent",
+        "recommendation_agent",
+        "notification_agent",
+        "investment_attributes",
+        "correlating_client_investment_profiles",
+        "recommendation_model",
+        "results_recommendations",
+        "external_sources",
+        "rag",
+        "multi_agent_orchestration_workflow"
+      ],
+      "confidence": 0.8
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "unknown_protocol",
+      "about": null,
+      "question": "What is the protocol used for communication between components?",
+      "options": [
+        "http",
+        "https",
+        "grpc",
+        "unknown"
+      ],
+      "blocking": false
+    }
+  ],
+  "overall_confidence": 0.85,
+  "legibility_notes": "The diagram is generally clear, but some component names are not very descriptive.",
+  "_provenance": {
+    "model": "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
+    "source_artifact": "/private/tmp/claude-501/-Users-jorgedbchagas-Documents-Projects-watsonx-challenge-watsonx-challenge-2026/5a2243f6-ba3d-4587-a2da-ddec908694b2/scratchpad/t/runs/20260721-1700-smoke/workspace/.arch/intake/20260721-1700-smoke/arquitetura_teste_uci.normalized.png",
+    "source_kind": "screenshot",
+    "extraction_path": "vision",
+    "prompt_version": "extract@1.1"
+  },
+  "_quality": {
+    "broken_refs": [
+      "external_sources_to_rag",
+      "ghost_edge"
+    ],
+    "connections_needing_verification": [
+      "external_sources_to_rag",
+      "ghost_edge"
+    ],
+    "action_required": "Call arch_vision_verify_element for every id in connections_needing_verification before assembling the AIR."
+  }
+}

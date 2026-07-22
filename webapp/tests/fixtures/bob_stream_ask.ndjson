@@ -1,0 +1,7 @@
+{"type": "init", "timestamp": "2026-07-21T22:10:10.286Z", "session_id": "52e510be-cc9b-4599-98d0-6a0fe16f3f6a", "model": "premium"}
+{"type": "message", "timestamp": "2026-07-21T22:10:10.286Z", "role": "user", "content": "Reply with exactly: ok"}
+{"type": "message", "timestamp": "2026-07-21T22:10:13.372Z", "role": "assistant", "content": "ok", "delta": true}
+{"type": "message", "timestamp": "2026-07-21T22:10:15.870Z", "role": "assistant", "content": "[using tool attempt_completion: Successfully completed | Cost: 0.09]\n", "delta": true}
+{"type": "tool_use", "timestamp": "2026-07-21T22:10:15.870Z", "tool_name": "attempt_completion", "tool_id": "tool-1", "parameters": {"result": "\nok\n"}}
+{"type": "tool_result", "timestamp": "2026-07-21T22:10:15.871Z", "tool_id": "tool-1", "status": "success", "output": "\nok\n"}
+{"type": "result", "timestamp": "2026-07-21T22:10:15.872Z", "status": "success", "stats": {"total_tokens": 37154, "input_tokens": 37126, "output_tokens": 28, "duration_ms": 5587, "session_costs": 0.092885, "max_budget": 100, "budget_spend": 78.12, "tool_calls": 1}}

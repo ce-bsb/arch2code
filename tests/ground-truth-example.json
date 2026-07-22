@@ -1,0 +1,111 @@
+{
+  "_read_this": "Ground truth for the synthetic fixture. It exists to MEASURE the extraction, not to feed it. Never pass this file to the model as a hint — that would test its ability to copy, not to read.",
+  "_note": "Label values are drawn as pixels inside the PNG and are intentionally Portuguese. Never translate them. That covers every components[].label (\"App Mobile\", \"API Gateway\", \"Svc Pedidos\", \"DB Pedidos\", \"Notificacao\" — no cedilla, no tilde, exactly as drawn) and every connections[].label (\"REST\", \"POST\", \"SQL\", \"?\"). preflight.py --extract scores the vision output against these exact strings: translating one turns a CORRECT reading into a hallucination.",
+  "file": ".arch/intake/inbox/exemplo-rascunho.png",
+  "nature": "synthetic, shaky strokes, imitates a hand-drawn sketch. Correct source_kind: napkin",
+  "expected_components": 5,
+  "components": [
+    {
+      "suggested_id": "app_mobile",
+      "label": "App Mobile",
+      "kind": "ui",
+      "bbox_actual": [
+        0.05,
+        0.1,
+        0.17857142857142858,
+        0.13333333333333333
+      ]
+    },
+    {
+      "suggested_id": "api_gateway",
+      "label": "API Gateway",
+      "kind": "gateway",
+      "bbox_actual": [
+        0.34285714285714286,
+        0.1,
+        0.17857142857142858,
+        0.13333333333333333
+      ]
+    },
+    {
+      "suggested_id": "svc_pedidos",
+      "label": "Svc Pedidos",
+      "kind": "service",
+      "bbox_actual": [
+        0.6357142857142857,
+        0.1,
+        0.17857142857142858,
+        0.13333333333333333
+      ]
+    },
+    {
+      "suggested_id": "db_pedidos",
+      "label": "DB Pedidos",
+      "kind": "database",
+      "bbox_actual": [
+        0.6357142857142857,
+        0.4666666666666667,
+        0.17857142857142858,
+        0.13333333333333333
+      ]
+    },
+    {
+      "suggested_id": "svc_notifica",
+      "label": "Notificacao",
+      "kind": "service",
+      "bbox_actual": [
+        0.30714285714285716,
+        0.7111111111111111,
+        0.2,
+        0.13333333333333333
+      ]
+    }
+  ],
+  "expected_connections": 4,
+  "connections": [
+    {
+      "from": "app_mobile",
+      "to": "api_gateway",
+      "label": "REST",
+      "arrow_visible": true,
+      "direction_assertable": true
+    },
+    {
+      "from": "api_gateway",
+      "to": "svc_pedidos",
+      "label": "POST",
+      "arrow_visible": true,
+      "direction_assertable": true
+    },
+    {
+      "from": "svc_pedidos",
+      "to": "db_pedidos",
+      "label": "SQL",
+      "arrow_visible": true,
+      "direction_assertable": true
+    },
+    {
+      "between": [
+        "svc_pedidos",
+        "svc_notifica"
+      ],
+      "label": "?",
+      "arrow_visible": false,
+      "direction_assertable": false,
+      "TRAP": "Line with NO arrowhead, labeled '?'. It is the central test of this fixture."
+    }
+  ],
+  "pass_criteria": [
+    "1. All 5 components show up, with roughly correct labels.",
+    "2. The 3 arrows that do have arrowheads show up with the CORRECT direction (reversing one is the classic failure).",
+    "3. The 4th line becomes sync='unknown' plus an unknowns[] entry with blocking=true. If the model asserts a direction here, it MADE IT UP — the fixture does not carry that information.",
+    "4. No component that is not in the list above (Redis, Kafka, a queue... = pattern hallucination).",
+    "5. Running --gate, the AIR must be BLOCKED because of the unknown from item 3."
+  ],
+  "what_each_failure_means": {
+    "reversed an arrow": "weak extraction prompt, or a rotated image — check the EXIF rotation",
+    "asserted a direction on the line with no arrowhead": "the model is completing the drawing; the EXTRACT_PROMPT is not being obeyed",
+    "invented a component": "same thing — and it is the most dangerous error, because it is plausible",
+    "high confidence on everything": "poor calibration; a napkin should push confidence down"
+  }
+}

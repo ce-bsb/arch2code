@@ -1,0 +1,249 @@
+<svg class="diag" viewBox="0 0 1680 610" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#525252"/>
+    </marker>
+    <marker id="ab" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#0f62fe"/>
+    </marker>
+    <marker id="ap" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#8a3ffc"/>
+    </marker>
+    <marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#d02670"/>
+    </marker>
+  </defs>
+
+  <style>
+    .t   { font-family:'IBM Plex Sans',sans-serif; }
+    .m   { font-family:'IBM Plex Mono',monospace; }
+    .lbl { font-size:13px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; fill:#6f6f6f; }
+    .nm  { font-size:16px; font-weight:600; fill:#161616; }
+    .nmw { font-size:16px; font-weight:600; fill:#ffffff; }
+    .sl  { font-size:12px; fill:#525252; }
+    .slw { font-size:12px; fill:#c6c6c6; }
+    .xs  { font-size:11px; fill:#6f6f6f; }
+    .xsw { font-size:11px; fill:#a8a8a8; }
+    .tiny{ font-size:10px; fill:#8d8d8d; letter-spacing:.05em; }
+    .role{ font-size:12px; fill:#393939; }
+  </style>
+
+  <!-- ============ INPUTS ============ -->
+  <text class="t lbl" x="0" y="14">Input</text>
+  <g class="t">
+    <rect x="0" y="30" width="148" height="34" fill="#f4f4f4" stroke="#e0e0e0"/>
+    <text class="nm" x="10" y="52" style="font-size:14px">📷 napkin photo</text>
+    <rect x="0" y="70" width="148" height="34" fill="#f4f4f4" stroke="#e0e0e0"/>
+    <text class="nm" x="10" y="92" style="font-size:14px">🖼 whiteboard</text>
+    <rect x="0" y="110" width="148" height="34" fill="#f4f4f4" stroke="#e0e0e0"/>
+    <text class="nm" x="10" y="132" style="font-size:14px">🖥 screenshot</text>
+    <rect x="0" y="150" width="148" height="34" fill="#edf5ff" stroke="#d0e2ff"/>
+    <text class="nm" x="10" y="166" style="font-size:13px; fill:#0043ce">.drawio .puml</text>
+    <text class="tiny" x="10" y="179" style="fill:#0f62fe">deterministic · 0 tokens</text>
+  </g>
+  <text class="t tiny" x="0" y="204">→ .arch/intake/inbox/</text>
+
+  <!-- ============ ENTRY SURFACES ============ -->
+  <text class="t lbl" x="0" y="258">Two ways in</text>
+  <g class="t">
+    <rect x="0" y="272" width="148" height="60" fill="#161616"/>
+    <text class="nmw" x="10" y="294" style="font-size:13px">IBM Bob IDE</text>
+    <text class="xsw m" x="10" y="310">🔀 arch2code</text>
+    <text class="xsw" x="10" y="324" style="font-size:10px">orchestrator mode</text>
+
+    <rect x="0" y="342" width="148" height="60" fill="#ffffff" stroke="#161616" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text class="nm" x="10" y="361" style="font-size:12px">web application</text>
+    <text class="m xs" x="10" y="374" style="font-size:9.5px; fill:#0f62fe">webapp/</text>
+    <text class="xs" x="10" y="387" style="font-size:9.5px">Python · live run streaming</text>
+    <text class="xs" x="10" y="398" style="font-size:9.5px; fill:#8d8d8d">open in a browser</text>
+  </g>
+
+  <!-- use cases box -->
+  <text class="t lbl" x="0" y="436">Use cases tested</text>
+  <rect x="0" y="444" width="148" height="128" fill="#f4f4f4"/>
+  <g class="t">
+    <text class="xs" x="10" y="462" style="font-size:10px;fill:#161616">Card servicing — multi-agent</text>
+    <text class="xs" x="10" y="476" style="font-size:10px;fill:#161616">Price research &amp; analysis</text>
+    <text class="xs" x="10" y="490" style="font-size:10px;fill:#161616">Investment advisory</text>
+    <text class="xs" x="10" y="504" style="font-size:10px;fill:#161616">Portfolio recommendation</text>
+    <line x1="10" y1="514" x2="138" y2="514" stroke="#c6c6c6"/>
+    <text class="xs" x="10" y="530" style="font-size:10px"><tspan style="font-size:12px;fill:#161616;font-weight:600">35</tspan> components extracted</text>
+    <text class="xs" x="10" y="545" style="font-size:10px"><tspan style="font-size:12px;fill:#161616;font-weight:600">32</tspan> connections extracted</text>
+    <text class="xs" x="10" y="560" style="font-size:10px"><tspan style="font-size:12px;fill:#161616;font-weight:600">17/17</tspan> assumptions scoped</text>
+  </g>
+  <text class="t tiny" x="0" y="584" style="fill:#d02670">one was BLOCKED — 10 forced changes</text>
+
+  <!-- arrows into the Bob boundary -->
+  <path d="M150,110 L186,110" stroke="#525252" stroke-width="1.4" fill="none" marker-end="url(#a)"/>
+  <path d="M150,302 C172,302 172,262 186,262" stroke="#525252" stroke-width="1.4" fill="none" marker-end="url(#a)"/>
+  <path d="M150,372 C172,372 172,272 186,272" stroke="#525252" stroke-width="1.4" fill="none" marker-end="url(#a)"/>
+
+  <!-- ============ BOB BOUNDARY ============ -->
+  <rect x="196" y="24" width="1250" height="562" fill="none" stroke="#161616" stroke-width="1.4" stroke-dasharray="5 4"/>
+  <rect x="196" y="24" width="1250" height="26" fill="#161616"/>
+  <text class="t" x="208" y="42" style="font-size:13px; font-weight:600; fill:#ffffff; letter-spacing:.1em">IBM BOB — PROJECT WORKSPACE</text>
+  <text class="t m" x="1436" y="42" text-anchor="end" style="font-size:11px; fill:#78a9ff">.bob/custom_modes.yaml</text>
+
+  <!-- ============ MCP LANE (top) ============ -->
+  <rect x="212" y="62" width="466" height="88" fill="#f6f2ff" stroke="#8a3ffc" stroke-width="1.2"/>
+  <text class="t lbl" x="224" y="80" style="fill:#8a3ffc">MCP server · arch_vision</text>
+  <text class="t m xs" x="224" y="98" style="fill:#6929c4">arch_vision_list_intake</text>
+  <text class="t m xs" x="224" y="112" style="fill:#6929c4">arch_vision_describe_diagram</text>
+  <text class="t m xs" x="450" y="98" style="fill:#6929c4">arch_vision_extract_architecture</text>
+  <text class="t m xs" x="450" y="112" style="fill:#6929c4">arch_vision_verify_element</text>
+  <text class="t tiny" x="224" y="134">called with use_mcp_tool — a pinned model, a versioned prompt, a confidence score</text>
+
+  <rect x="700" y="62" width="230" height="88" fill="#161616"/>
+  <text class="t lbl" x="712" y="80" style="fill:#be95ff">watsonx.ai</text>
+  <text class="t nmw" x="712" y="102" style="font-size:13px">llama-4-maverick</text>
+  <text class="t xsw m" x="712" y="118" style="font-size:10px">17b-128e-instruct-fp8</text>
+  <text class="t xsw" x="712" y="136" style="font-size:10px">multimodal · 2 passes per arrow</text>
+
+  <path d="M680,106 L698,106" stroke="#8a3ffc" stroke-width="1.4" fill="none" marker-end="url(#ap)"/>
+
+  <!-- ============ THE FIVE MODES ============ -->
+  <text class="t lbl" x="1438" y="182" text-anchor="end">The five gated stages — one Bob custom mode each</text>
+
+  <!-- stage boxes: x = 212, 460, 708, 956, 1204 ; w=234 -->
+  <!-- 1 intake -->
+  <g class="t">
+    <rect x="212" y="192" width="234" height="150" fill="#ffffff" stroke="#e0e0e0"/>
+    <rect x="212" y="192" width="234" height="4" fill="#007d79"/>
+    <text class="nm" x="224" y="216" style="font-size:14px">📥 1 · Intake</text>
+    <text class="m sl" x="224" y="232" style="fill:#007d79">arch-intake</text>
+    <text class="role" x="224" y="252">Reports what IS drawn.</text>
+    <text class="role" x="224" y="266">Never completes an arrow.</text>
+    <text class="m tiny" x="224" y="288" style="fill:#6f6f6f">read edit command mcp skill</text>
+    <line x1="224" y1="298" x2="434" y2="298" stroke="#e0e0e0"/>
+    <text class="m xs" x="224" y="314" style="fill:#161616">writes ▸ .arch/intake/</text>
+    <text class="m tiny" x="224" y="330">extraction.json + evidence</text>
+  </g>
+  <!-- 2 analyst -->
+  <g class="t">
+    <rect x="460" y="192" width="234" height="150" fill="#ffffff" stroke="#e0e0e0"/>
+    <rect x="460" y="192" width="234" height="4" fill="#0f62fe"/>
+    <text class="nm" x="472" y="216" style="font-size:14px">🧠 2 · Context</text>
+    <text class="m sl" x="472" y="232" style="fill:#0f62fe">arch-analyst</text>
+    <text class="role" x="472" y="252">Separates observed /</text>
+    <text class="role" x="472" y="266">inferred / unknown.</text>
+    <text class="m tiny" x="472" y="288" style="fill:#6f6f6f">read edit command mcp skill</text>
+    <line x1="472" y1="298" x2="682" y2="298" stroke="#e0e0e0"/>
+    <text class="m xs" x="472" y="314" style="fill:#161616">writes ▸ .arch/air/</text>
+    <text class="m tiny" x="472" y="330">air.json — THE CONTRACT</text>
+  </g>
+  <!-- 3 critic -->
+  <g class="t">
+    <rect x="708" y="192" width="234" height="150" fill="#ffffff" stroke="#d02670" stroke-width="1.4"/>
+    <rect x="708" y="192" width="234" height="4" fill="#d02670"/>
+    <text class="nm" x="720" y="216" style="font-size:14px">🔍 3 · Critique</text>
+    <text class="m sl" x="720" y="232" style="fill:#d02670">arch-critic</text>
+    <text class="role" x="720" y="252">Adversarial. Incentive is</text>
+    <text class="role" x="720" y="266">to find the defect.</text>
+    <text class="m tiny" x="720" y="288" style="fill:#6f6f6f">read edit command mcp skill</text>
+    <line x1="720" y1="298" x2="930" y2="298" stroke="#e0e0e0"/>
+    <text class="m xs" x="720" y="314" style="fill:#161616">writes ▸ .arch/review/</text>
+    <text class="m tiny" x="720" y="330" style="fill:#d02670">VERDICT: APPROVED | BLOCKED</text>
+  </g>
+  <!-- 4 scaffold -->
+  <g class="t">
+    <rect x="956" y="192" width="234" height="150" fill="#ffffff" stroke="#e0e0e0"/>
+    <rect x="956" y="192" width="234" height="4" fill="#8a3ffc"/>
+    <text class="nm" x="968" y="216" style="font-size:14px">🏗 4 · Scaffold</text>
+    <text class="m sl" x="968" y="232" style="fill:#8a3ffc">arch-scaffold</text>
+    <text class="role" x="968" y="252">Implements the AIR and</text>
+    <text class="role" x="968" y="266">nothing but the AIR.</text>
+    <text class="m tiny" x="968" y="288" style="fill:#6f6f6f">read edit command skill</text>
+    <line x1="968" y1="298" x2="1178" y2="298" stroke="#e0e0e0"/>
+    <text class="m xs" x="968" y="314" style="fill:#161616">writes ▸ everything EXCEPT</text>
+    <text class="m tiny" x="968" y="330" style="fill:#da1e28">.arch/{intake,air,review}</text>
+  </g>
+  <!-- 5 validator -->
+  <g class="t">
+    <rect x="1204" y="192" width="234" height="150" fill="#ffffff" stroke="#e0e0e0"/>
+    <rect x="1204" y="192" width="234" height="4" fill="#198038"/>
+    <text class="nm" x="1216" y="216" style="font-size:14px">✅ 5 · Validate</text>
+    <text class="m sl" x="1216" y="232" style="fill:#198038">arch-validator</text>
+    <text class="role" x="1216" y="252">Asks "does the architecture</text>
+    <text class="role" x="1216" y="266">as drawn hold up?"</text>
+    <text class="m tiny" x="1216" y="288" style="fill:#6f6f6f">read edit command skill</text>
+    <line x1="1216" y1="298" x2="1426" y2="298" stroke="#e0e0e0"/>
+    <text class="m xs" x="1216" y="314" style="fill:#161616">writes ▸ tests + .arch/run/</text>
+    <text class="m tiny" x="1216" y="330">validation.md · hypotheses</text>
+  </g>
+
+  <!-- stage-to-stage arrows -->
+  <path d="M448,267 L458,267" stroke="#525252" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M696,267 L706,267" stroke="#525252" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M944,267 L954,267" stroke="#525252" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M1192,267 L1202,267" stroke="#525252" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+
+  <!-- mcp -> intake / critic -->
+  <path d="M300,152 L300,190" stroke="#8a3ffc" stroke-width="1.3" fill="none" marker-end="url(#ap)"/>
+  <path d="M640,152 C640,170 790,170 790,190" stroke="#8a3ffc" stroke-width="1.3" stroke-dasharray="4 3" fill="none" marker-end="url(#ap)"/>
+  <text class="t tiny" x="806" y="176" style="fill:#8a3ffc">2nd pass: verify, not re-extract</text>
+
+  <!-- BLOCKED loopback 3 -> 2 -->
+  <path d="M760,344 C760,378 578,378 578,346" stroke="#d02670" stroke-width="1.4" stroke-dasharray="4 3" fill="none" marker-end="url(#ar)"/>
+  <text class="t tiny" x="784" y="372" style="fill:#d02670">VERDICT: BLOCKED → back to the analyst, with concrete questions for the human</text>
+
+  <!-- ============ FOUNDATION STRIP ============ -->
+  <rect x="212" y="400" width="1226" height="76" fill="#f4f4f4"/>
+  <text class="t lbl" x="224" y="420">Shared Bob assets — committed to Git, inherited by the whole team</text>
+  <g class="t">
+    <rect x="224" y="430" width="290" height="34" fill="#ffffff" stroke="#e0e0e0"/>
+    <text class="m xs" x="234" y="444" style="fill:#161616">.bob/rules/ + rules-&lt;slug&gt;/</text>
+    <text class="tiny" x="234" y="457">global + per-mode rubrics, auto-loaded</text>
+
+    <rect x="524" y="430" width="290" height="34" fill="#ffffff" stroke="#e0e0e0"/>
+    <text class="m xs" x="534" y="444" style="fill:#161616">.bob/skills/ ×4</text>
+    <text class="tiny" x="534" y="457">diagram-intake · air-normalizer · scaffold · harness</text>
+
+    <rect x="824" y="430" width="290" height="34" fill="#ffffff" stroke="#e0e0e0"/>
+    <text class="m xs" x="834" y="444" style="fill:#161616">air.schema.json</text>
+    <text class="tiny" x="834" y="457">JSON Schema 2020-12 + 8 automatic gates</text>
+
+    <rect x="1124" y="430" width="302" height="34" fill="#ffffff" stroke="#e0e0e0"/>
+    <text class="m xs" x="1134" y="444" style="fill:#161616">.bob/mcp.json</text>
+    <text class="tiny" x="1134" y="457">no secrets, no absolute paths — shareable</text>
+  </g>
+
+  <!-- ============ THE INVARIANT CALLOUT ============ -->
+  <rect x="212" y="490" width="1226" height="82" fill="#161616"/>
+  <text class="t lbl" x="228" y="510" style="fill:#f1c21b">Write scope is a permission, not an instruction</text>
+  <text class="t m" x="228" y="534" style="font-size:15px; fill:#78a9ff">arch-scaffold  fileRegex:  ^(?!\.arch/(intake|air|review)/).*$</text>
+  <text class="t" x="228" y="554" style="font-size:12px; fill:#c6c6c6">Bob denies the code-writing mode's edit tools any access to the specification it implements, or to the review that approved it. That is the</text>
+  <text class="t" x="228" y="568" style="font-size:12px; fill:#c6c6c6">barrier against spec drift — where the agent rewrites the contract to fit its own output, every test goes green, and nothing matches the drawing.</text>
+
+  <!-- ============ OUTPUT ============ -->
+  <text class="t lbl" x="1466" y="14">Output</text>
+  <rect x="1466" y="24" width="214" height="270" fill="#f6f2ff" stroke="#8a3ffc" stroke-width="1.4"/>
+  <rect x="1466" y="24" width="214" height="26" fill="#8a3ffc"/>
+  <text class="t nmw" x="1476" y="42" style="font-size:12px">whatever the drawing is</text>
+  <g class="t">
+    <text class="m xs" x="1476" y="66" style="fill:#161616">agentic</text>
+    <text class="m tiny" x="1486" y="79">Orchestrate ADK · LangGraph</text>
+    <text class="m xs" x="1476" y="99" style="fill:#161616">enterprise / legacy</text>
+    <text class="m tiny" x="1486" y="112">RPA · automation · mainframe</text>
+    <text class="m tiny" x="1486" y="124">COBOL · Natural · Java</text>
+    <text class="m xs" x="1476" y="144" style="fill:#161616">cloud-native</text>
+    <text class="m tiny" x="1486" y="157">containers · services · IaC</text>
+    <line x1="1476" y1="172" x2="1670" y2="172" stroke="#c6c6c6"/>
+    <text class="m xs" x="1476" y="190" style="fill:#161616">+ always</text>
+    <text class="m tiny" x="1486" y="203">contracts · tests · README</text>
+    <text class="m tiny" x="1486" y="215">Makefile · .env.example</text>
+    <text class="m xs" x="1476" y="235" style="fill:#161616">manifest.json</text>
+    <text class="m tiny" x="1486" y="248">component id → files</text>
+    <text class="t tiny" x="1476" y="272" style="fill:#8a3ffc">platform is a contract input,</text>
+    <text class="t tiny" x="1476" y="284" style="fill:#8a3ffc">not an assumption in the tool</text>
+  </g>
+  <path d="M1440,190 L1464,190" stroke="#8a3ffc" stroke-width="1.6" fill="none" marker-end="url(#ap)"/>
+
+  <!-- traceability callout under output -->
+  <rect x="1466" y="308" width="214" height="88" fill="#ffffff" stroke="#e0e0e0"/>
+  <text class="t lbl" x="1476" y="326" style="font-size:11px">Every file, traceable</text>
+  <text class="t m" x="1476" y="344" style="font-size:9px; fill:#6f6f6f"># arch2code: generated from</text>
+  <text class="t m" x="1476" y="356" style="font-size:9px; fill:#6f6f6f"># AIR &lt;run&gt; :: &lt;component_id&gt;</text>
+  <text class="t m" x="1476" y="368" style="font-size:9px; fill:#6f6f6f"># source: &lt;artifact&gt; evidence:</text>
+  <text class="t m" x="1476" y="380" style="font-size:9px; fill:#6f6f6f"># bbox [.28 .10 .38 .70]</text>
+  <text class="t m" x="1476" y="392" style="font-size:9px; fill:#da1e28"># DO NOT EDIT BY HAND</text>
+</svg>

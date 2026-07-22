@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="arch2code turns an architecture drawing into a complete software solution, showing every step of the reasoning."
+    />
+    <title>arch2code — from a drawing to a working solution</title>
+
+    <!--
+      One stylesheet is the whole integration: app.css imports tokens.css and the
+      self-hosted IBM Plex faces. No build step, no CDN, no webfont host, no
+      network at runtime. The app comes up with ./run.sh on a machine with no
+      internet and stays up through a demo.
+    -->
+    <link rel="stylesheet" href="/css/app.css" />
+
+    <!--
+      The theme pin, applied before first paint. Without this the page renders
+      light for one frame and then flips, which reads as a bug to everyone who
+      runs their machine in dark mode. Deliberately inline and tiny: an external
+      module would arrive after the first paint and defeat the purpose.
+    -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('arch2code.theme');
+          if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+        } catch (e) {
+          /* private mode: follow the OS, which is the default anyway */
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+
+    <header class="masthead">
+      <a class="masthead__brand" href="#/">
+        <span class="masthead__mark" aria-hidden="true"></span>
+        <span class="masthead__name"><span>IBM BOB</span> arch2code</span>
+      </a>
+
+      <p class="masthead__context">
+        <span class="truncate">A drawing becomes a reviewed solution — with a human at the gate.</span>
+      </p>
+
+      <div class="masthead__actions">
+        <button
+          type="button"
+          id="health-chip"
+          class="masthead-btn"
+          aria-expanded="false"
+          aria-controls="health-panel"
+        >
+          <span class="status-dot status-running" aria-hidden="true"></span>
+          <span>Checking…</span>
+        </button>
+        <button type="button" id="theme-toggle" class="masthead-btn" aria-label="Theme">◐</button>
+      </div>
+    </header>
+
+    <!-- Shown only when there is something to act on. A permanent green bar is a
+         bar people stop reading. -->
+    <div id="health-banner" class="strip" role="status" aria-live="polite" hidden></div>
+    <div id="health-panel" class="health-panel" tabindex="-1" hidden></div>
+
+    <main id="main" class="app-main">
+      <div id="screen-landing"></div>
+      <div id="screen-run" hidden></div>
+    </main>
+
+    <footer class="app-footer">
+      <p>
+        The gate at stage 3 is always a human decision. A <code>verdict.md</code> with no
+        <code>VERDICT: APPROVED</code> or <code>VERDICT: BLOCKED</code> line is a defect of the run,
+        never an approval by omission.
+      </p>
+      <p>
+        Local tool. Binds to 127.0.0.1, ships no authentication, and is not to be exposed publicly.
+      </p>
+    </footer>
+
+    <noscript>
+      <div class="notice notice-error">
+        <div class="notice__body">
+          <p class="notice-title">This app needs JavaScript</p>
+          <p>
+            It is a live view over a running subprocess pipeline, streamed over server-sent events.
+            There is no static rendering to fall back to.
+          </p>
+          <p class="notice-remedy">
+            The API is unaffected: <code>/api/health</code> and <code>/docs</code> answer without a
+            browser.
+          </p>
+        </div>
+      </div>
+    </noscript>
+
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>

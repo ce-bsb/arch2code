@@ -1,0 +1,6 @@
+{
+  "pythonInterpreterPath": "/opt/anaconda3/bin/python3",
+  "pythonVersion": "3.13",
+  "include": ["mcp"],
+  "typeCheckingMode": "basic"
+}

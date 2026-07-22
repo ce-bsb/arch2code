@@ -1,0 +1,8 @@
+# arch_vision — vision MCP server for IBM Bob
+mcp>=1.2.0
+httpx>=0.27.0
+pydantic>=2.6.0
+
+# Used by the diagram-intake skill scripts:
+pillow>=10.0.0      # image normalization (EXIF rotation, resize)
+jsonschema>=4.21.0  # AIR validation

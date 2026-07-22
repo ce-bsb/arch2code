@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>arch2code — CSS contract</title>
+    <link rel="stylesheet" href="/css/app.css" />
+    <!--
+      Every pattern app.css provides, rendered once, in both themes.
+
+      This file is documentation that cannot go stale: if a class stops working
+      you see it here. It is NOT part of the application — nothing links to it
+      and no JS imports it. Open http://127.0.0.1:8765/css/gallery.html while
+      the app is running.
+
+      The only inline script is the theme switch, because demonstrating the
+      light/dark contract is the point of the page.
+    -->
+  </head>
+  <body>
+    <header class="masthead">
+      <span class="masthead__brand">
+        <span class="masthead__mark" aria-hidden="true"></span>
+        <span class="masthead__name"><span>arch2code</span> CSS contract</span>
+      </span>
+      <p class="masthead__context">
+        <span class="truncate">Carbon g10 / g100 tokens, IBM Plex, no build step, no network.</span>
+      </p>
+      <div class="masthead__actions">
+        <button type="button" class="masthead-btn" data-theme-set="light">Light</button>
+        <button type="button" class="masthead-btn" data-theme-set="dark">Dark</button>
+        <button type="button" class="masthead-btn" data-theme-set="">Follow OS</button>
+      </div>
+    </header>
+
+    <main class="wrap" style="padding-block: var(--a2c-space-07) var(--a2c-space-09)">
+      <div class="stack stack--loose">
+
+        <!-- ================================================== typography -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">01 · Typography</p>
+          <h1 class="hero-title">A hero title in <strong>light 300</strong>.</h1>
+          <h2 class="section-heading">A section heading, also light.</h2>
+          <p class="lead">
+            The lead. Light weight, generous line height, capped at 62 characters so it never
+            becomes a wall.
+          </p>
+          <p class="section-title">Section title — 12px / 500 / 0.16em / uppercase</p>
+          <p class="prose">
+            Body prose at the app's default 14px. Capped at <code>--a2c-prose-max</code>.
+          </p>
+          <p class="meta">Meta / helper / hint — the faintest legible weight.</p>
+          <p class="numeric">1,199,026 · 5m 54s · 0.09</p>
+        </section>
+
+        <!-- ================================================== surfaces -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">02 · Surfaces</p>
+          <div class="form-grid">
+            <section class="surface">
+              <div class="surface__head"><h3 class="section-title">Plain</h3></div>
+              <div class="surface__body"><p class="meta">1px hairline, layer-01.</p></div>
+            </section>
+            <section class="surface surface--accent">
+              <div class="surface__head"><h3 class="section-title">Accent</h3></div>
+              <div class="surface__body"><p class="meta">3px top rule in blue-60.</p></div>
+            </section>
+            <section class="surface surface--edge surface--sunken">
+              <div class="surface__head"><h3 class="section-title">Edge + sunken</h3></div>
+              <div class="surface__body"><p class="meta">3px left rule, layer-02.</p></div>
+            </section>
+          </div>
+        </section>
+
+        <!-- ================================================== buttons -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">03 · Buttons</p>
+          <div class="btn-set">
+            <button class="btn btn-primary">Primary</button>
+            <button class="btn btn-secondary">Secondary</button>
+            <button class="btn btn-tertiary">Tertiary</button>
+            <button class="btn btn-ghost">Ghost</button>
+            <button class="btn btn-quiet">Quiet</button>
+            <button class="btn btn-danger">Danger</button>
+            <button class="btn btn-primary" disabled>Disabled</button>
+          </div>
+          <div class="btn-set">
+            <button class="btn btn-sm btn-tertiary">Small</button>
+            <button class="btn btn--lg btn-primary">
+              Large <span class="btn__note">arch2code.zip</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ================================================== fields -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">04 · Fields</p>
+          <div class="form-grid">
+            <div class="field">
+              <label for="g-input">Text</label>
+              <input id="g-input" class="input" placeholder="placeholder" />
+              <p class="field-hint">A hint that explains the consequence, not the format.</p>
+            </div>
+            <div class="field">
+              <label for="g-select">Select</label>
+              <select id="g-select" class="select"><option>Napkin — hand-drawn</option></select>
+            </div>
+            <div class="field">
+              <label for="g-invalid">Invalid</label>
+              <input id="g-invalid" class="input" aria-invalid="true" value="not-a-slug!" />
+            </div>
+          </div>
+          <details class="disclose">
+            <summary>Advanced options</summary>
+            <div class="disclose__body"><p class="meta">Collapsed by default, defaults that work.</p></div>
+          </details>
+        </section>
+
+        <!-- ================================================== status -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">05 · Tags and status</p>
+          <div class="row">
+            <span class="tag tag--blue"><span class="tag__label">blue</span></span>
+            <span class="tag tag--cyan"><span class="tag__label">cyan</span></span>
+            <span class="tag tag--teal"><span class="tag__label">teal</span></span>
+            <span class="tag tag--green"><span class="tag__label">green</span></span>
+            <span class="tag tag--red"><span class="tag__label">red</span></span>
+            <span class="tag tag--warm-gray"><span class="tag__label">human gate</span></span>
+            <span class="tag tag--outline"><span class="tag__label">outline</span></span>
+          </div>
+          <div class="row">
+            <span class="status-badge status-created">created</span>
+            <span class="status-badge status-running">running</span>
+            <span class="status-badge status-succeeded">succeeded</span>
+            <span class="status-badge status-awaiting_input">awaiting input</span>
+            <span class="status-badge status-blocked">blocked</span>
+            <span class="status-badge status-failed">failed</span>
+            <span class="status-badge status-cancelled">cancelled</span>
+          </div>
+          <div class="row"><span class="spinner">running</span></div>
+        </section>
+
+        <!-- ================================================== notices -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">06 · Notices</p>
+          <div class="notice">
+            <div class="notice__body">
+              <p class="notice-title">Information</p>
+              <p>The default. No modifier class.</p>
+            </div>
+          </div>
+          <div class="notice notice-warn">
+            <div class="notice__body">
+              <p class="notice-title">This run generated no code to download</p>
+              <p class="notice-remedy">Run the full pipeline on this upload to produce code.</p>
+            </div>
+          </div>
+          <div class="notice notice-error">
+            <div class="notice__body">
+              <p class="notice-title">The stage exited 0 and wrote nothing</p>
+              <p class="notice-remedy">A silent success is not a success.</p>
+            </div>
+          </div>
+          <div class="strip strip--warn">
+            <strong>2 stages exited 0 with no output</strong>
+            <span>Stages: scaffold, validator.</span>
+            <span class="strip__remedy">Re-run under a PTY.</span>
+          </div>
+        </section>
+
+        <!-- ================================================== meters -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">07 · Meters and switcher</p>
+          <div class="row">
+            <div class="switcher" role="tablist">
+              <button role="tab" aria-selected="true">Execution</button>
+              <button role="tab" aria-selected="false">Deliverables</button>
+            </div>
+            <div class="meters">
+              <div class="meter"><span class="meter__value">1,199,026</span><span class="meter__label">Tokens</span></div>
+              <div class="meter"><span class="meter__value">0.09</span><span class="meter__label">Cost</span></div>
+              <div class="meter meter--warn"><span class="meter__value">5m 54s</span><span class="meter__label">Elapsed</span></div>
+              <div class="meter"><span class="meter__value">27</span><span class="meter__label">Tool calls</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================== track -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">08 · The stage track</p>
+          <div class="track">
+            <article class="stage" data-state="succeeded">
+              <span class="stage__marker" aria-hidden="true"></span>
+              <button class="stage__head" aria-expanded="false">
+                <span class="stage__n">01</span>
+                <span class="stage__title">Intake — read the drawing</span>
+                <span class="stage__facts"><span>2m 07s</span><span>633,273 tok</span></span>
+              </button>
+            </article>
+            <article class="stage" data-state="running">
+              <span class="stage__marker" aria-hidden="true"></span>
+              <button class="stage__head" aria-expanded="true">
+                <span class="stage__n">02</span>
+                <span class="stage__title">Contextualization — build the AIR</span>
+                <span class="stage__facts"><span class="spinner">running</span></span>
+              </button>
+              <div class="stage__body">
+                <div class="stage__section">
+                  <p class="section-title">Reasoning</p>
+                  <div class="reasoning">
+                    <div class="think">
+                      <p class="think__label">Thinking</p>
+                      <div class="think__text"><b>Reading the extraction</b>
+The napkin sketch gave five components and four connections. One edge is marked with a “?”.</div>
+                    </div>
+                    <div class="say cursor">I'll start by reading the extraction from stage 1.</div>
+                  </div>
+                </div>
+                <div class="stage__section">
+                  <p class="section-title">Tool calls · 2</p>
+                  <div class="calls">
+                    <details class="call">
+                      <summary>
+                        <span class="call__caret" aria-hidden="true"></span>
+                        <span class="tag tag--sm tag--blue"><span class="tag__label">Bob</span></span>
+                        <span class="call__name">read_file</span>
+                        <span class="call__args">.arch/intake/20260722-0528-modeb2/extraction.json</span>
+                        <span class="call__facts">
+                          <span class="tag tag--sm tag--green"><span class="tag__label">ok</span></span>
+                          <span>5 ms</span>
+                        </span>
+                      </summary>
+                      <div class="call__body">
+                        <div class="payload">
+                          <p class="payload__label">Parameters</p>
+                          <pre class="code-block code-block--wrap">{ "path": ".arch/intake/.../extraction.json" }</pre>
+                        </div>
+                        <p class="dim">id call_01 · exit 0 · 5 ms</p>
+                      </div>
+                    </details>
+                    <details class="call call--error">
+                      <summary>
+                        <span class="call__caret" aria-hidden="true"></span>
+                        <span class="tag tag--sm tag--cyan"><span class="tag__label">MCP</span></span>
+                        <span class="call__name">arch_vision_verify_element</span>
+                        <span class="call__args">conn_pedidos_to_notificacao</span>
+                        <span class="call__facts">
+                          <span class="tag tag--sm tag--red"><span class="tag__label">error</span></span>
+                          <span>1.4 s</span>
+                        </span>
+                      </summary>
+                      <div class="call__body">
+                        <p class="problem">The model returned an error payload.</p>
+                        <p class="remedy">Check WATSONX_APIKEY, then re-run the stage.</p>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+                <div class="stage__section">
+                  <p class="section-title">Files written</p>
+                  <div class="wrote">
+                    <button type="button">20260722-0528-modeb2/air.json</button>
+                    <button type="button" class="is-missing">20260722-0528-modeb2/manifest.json</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="stage" data-state="awaiting">
+              <span class="stage__marker" aria-hidden="true"></span>
+              <button class="stage__head" aria-expanded="false">
+                <span class="stage__n">03</span>
+                <span class="stage__title">Critique — adversarial gate</span>
+                <span class="tag tag--sm tag--warm-gray"><span class="tag__label">human gate</span></span>
+                <span class="stage__facts"><span class="meta">waiting for you</span></span>
+              </button>
+            </article>
+            <article class="stage" data-state="failed">
+              <span class="stage__marker" aria-hidden="true"></span>
+              <button class="stage__head" aria-expanded="false">
+                <span class="stage__n">04</span>
+                <span class="stage__title">Scaffolding — generate the code</span>
+                <span class="stage__facts"><span class="status-badge status-failed">failed</span></span>
+              </button>
+            </article>
+            <article class="stage" data-state="pending">
+              <span class="stage__marker" aria-hidden="true"></span>
+              <button class="stage__head" aria-expanded="false">
+                <span class="stage__n">05</span>
+                <span class="stage__title">Validation — test the hypotheses</span>
+              </button>
+            </article>
+          </div>
+        </section>
+
+        <!-- ================================================== gate -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">09 · The gate</p>
+          <section class="gate gate--blocked">
+            <div class="gate__head">
+              <p class="eyebrow eyebrow--rule">Stage 3 · the human gate</p>
+              <h2 class="gate__title">The critic blocked this architecture.</h2>
+              <p class="lead">Nothing is generated until you decide.</p>
+              <span class="gate__verdict">VERDICT: BLOCKED</span>
+            </div>
+            <div class="gate__grid">
+              <div class="gate__evidence">
+                <p class="section-title">What the critic contested</p>
+                <div class="gate__findings">
+                  <div class="finding">
+                    <span class="finding__sev finding__sev--critical">CRITICAL</span>
+                    <div class="finding__body">
+                      <p class="finding__title">Invented connection direction</p>
+                      <p class="finding__text">Element: conn_pedidos_to_notificacao</p>
+                      <p class="remedy">Remove the connection and record a blocking unknown.</p>
+                    </div>
+                  </div>
+                  <div class="finding">
+                    <span class="finding__sev finding__sev--medium">MEDIUM</span>
+                    <div class="finding__body">
+                      <p class="finding__title">Blocking unknowns present</p>
+                    </div>
+                  </div>
+                </div>
+                <pre class="gate__excerpt">## Executive Summary
+
+This AIR is BLOCKED due to a critical extraction error.</pre>
+              </div>
+              <form class="gate__decision">
+                <fieldset class="gate__choices">
+                  <legend>Your decision</legend>
+                  <label class="choice" for="g-approve">
+                    <input type="radio" name="g-gate" id="g-approve" />
+                    <span>
+                      <span class="choice__label">Approve — generate the code</span>
+                      <span class="choice__hint">Only approve what you have actually read.</span>
+                    </span>
+                  </label>
+                  <label class="choice" for="g-block">
+                    <input type="radio" name="g-gate" id="g-block" checked />
+                    <span>
+                      <span class="choice__label">Block — end the run here</span>
+                      <span class="choice__hint">Terminal, but not a failure: the gate worked.</span>
+                    </span>
+                  </label>
+                </fieldset>
+                <p class="gate__override">
+                  The critic BLOCKED this architecture and you are approving it anyway.
+                </p>
+                <button type="button" class="btn btn-danger btn--full btn--center">Override and approve</button>
+              </form>
+            </div>
+          </section>
+        </section>
+
+        <!-- ================================================== delivery -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">10 · Delivery</p>
+          <div class="downloads">
+            <div class="dl">
+              <p class="dl__name">The whole solution</p>
+              <p class="dl__what">Generated code, the full audit trail, both images and a MANIFEST.md.</p>
+              <p class="dl__facts"><span>19 files</span><span>2.4 MB</span></p>
+              <a class="btn btn-primary btn--full" href="#">Download <span class="btn__note">arch2code.zip</span></a>
+            </div>
+            <div class="dl">
+              <p class="dl__name">Just the code</p>
+              <p class="dl__what">Only what the scaffold stage generated.</p>
+              <a class="btn btn-tertiary btn--full" href="#">Download <span class="btn__note">code.zip</span></a>
+            </div>
+          </div>
+          <div class="files">
+            <section class="surface">
+              <div class="surface__head"><h3 class="section-title">Files</h3></div>
+              <div class="surface__body surface__body--flush">
+                <div class="tree">
+                  <ul>
+                    <li>
+                      <details open>
+                        <summary><span>.arch/review/20260722-0528-modeb2/</span><span class="tree__size">2 files</span></summary>
+                        <div style="padding-left:0.75rem">
+                          <ul>
+                            <li><button class="tree__file is-selected"><span>verdict.md</span><span class="tree__size">8.5 KB</span></button></li>
+                            <li><button class="tree__file is-missing"><span>manifest.json</span><span class="tree__size">missing</span></button></li>
+                          </ul>
+                        </div>
+                      </details>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+            <section class="surface viewer">
+              <div class="viewer__head">
+                <div>
+                  <p class="viewer__path">.arch/review/20260722-0528-modeb2/verdict.md</p>
+                  <p class="viewer__meta">verdict · 8.5 KB</p>
+                </div>
+                <div class="btn-set push">
+                  <button class="btn btn-sm btn-quiet">Copy</button>
+                  <a class="btn btn-sm btn-tertiary" href="#">Download this file</a>
+                </div>
+              </div>
+              <pre class="artifact-pre"><span class="gutter" aria-hidden="true" style="width:2ch">1
+2
+3
+4</span><span class="code-col"><span class="md-heading"># AIR Review</span>
+<span class="md-list">- **Verdict:** FALSE</span>
+<span class="md-verdict-block">VERDICT: BLOCKED</span>
+<span class="md-verdict-ok">VERDICT: APPROVED</span></span></pre>
+            </section>
+          </div>
+        </section>
+
+        <!-- ================================================== overlay -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">11 · Bounding boxes</p>
+          <section class="surface surface--accent" style="max-width:32rem">
+            <div class="surface__body surface__body--flush">
+              <div class="image-frame" style="aspect-ratio:14/9">
+                <div class="overlay-layer has-selection">
+                  <button class="ov-box ov-conf-high is-selected" style="left:6%;top:13%;width:22%;height:22%">
+                    <span class="ov-tag">api-gateway · 94%</span>
+                  </button>
+                  <button class="ov-box ov-conf-medium is-dimmed" style="left:38%;top:13%;width:22%;height:22%"></button>
+                  <button class="ov-box ov-conf-low is-dimmed" style="left:70%;top:13%;width:22%;height:22%"></button>
+                  <button class="ov-box ov-connection ov-alert is-dimmed" style="left:30%;top:55%;width:36%;height:8%"></button>
+                </div>
+              </div>
+            </div>
+            <div class="surface__foot">
+              <div class="image-legend">
+                <span class="lg lg-high">confident</span>
+                <span class="lg lg-medium">unsure</span>
+                <span class="lg lg-low">needs a human</span>
+                <span class="lg lg-conn">connection</span>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <!-- ================================================== states -->
+        <section class="stack">
+          <p class="eyebrow eyebrow--rule">12 · Empty, loading, skeleton</p>
+          <div class="form-grid">
+            <section class="surface">
+              <div class="empty-state">
+                <p class="empty">No artifact selected.</p>
+                <p class="empty-hint">An artifact listed as missing is itself the answer.</p>
+              </div>
+            </section>
+            <section class="surface">
+              <div class="surface__body stack stack--tight">
+                <p class="loading">Reading…</p>
+                <span class="skeleton skeleton-text"></span>
+                <span class="skeleton skeleton-text" style="width:70%"></span>
+                <span class="skeleton skeleton-block"></span>
+              </div>
+            </section>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <p>Every colour on this page is a <code>--cds-*</code> or <code>--a2c-*</code> token. No hex.</p>
+    </footer>
+
+    <script>
+      for (const button of document.querySelectorAll('[data-theme-set]')) {
+        button.addEventListener('click', () => {
+          const value = button.dataset.themeSet;
+          if (value) document.documentElement.dataset.theme = value;
+          else delete document.documentElement.dataset.theme;
+        });
+      }
+    </script>
+  </body>
+</html>

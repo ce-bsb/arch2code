@@ -1,0 +1,14 @@
+# Run state and uploads never enter Git: they contain user diagrams, full event
+# logs and the exact argv of every subprocess. The directories themselves are
+# tracked through their .gitkeep files.
+runs/*
+!runs/.gitkeep
+uploads/*
+!uploads/.gitkeep
+
+# Local overrides. .env.example is the tracked, secret-free template.
+.env
+
+__pycache__/
+*.py[cod]
+.pytest_cache/

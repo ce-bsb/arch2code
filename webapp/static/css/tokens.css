@@ -1,0 +1,1164 @@
+/*
+ * arch2code — theme tokens.
+ *
+ * The IBM Carbon g10 (light) and g100 (dark) semantic palettes, extracted
+ * verbatim from @carbon/styles@1.111.0 css/styles.min.css by
+ * webapp/tools/vendor_assets.py. DO NOT EDIT BY HAND — rerun the script.
+ *
+ * Contract for everything else in webapp/static/css:
+ *
+ *   - Colour is ALWAYS var(--cds-*) or var(--a2c-*). A raw hex value anywhere
+ *     outside this file is a bug: it will be wrong in one of the two themes.
+ *   - Light is the default. Dark applies when the OS asks for it, unless the
+ *     user has explicitly pinned a theme.
+ *   - The pin is data-theme on <html>: data-theme="dark" or data-theme="light".
+ *     It beats the OS in both directions. Absent = follow the OS.
+ *   - color-scheme is set alongside so native scrollbars, form controls and
+ *     the canvas match, with no flash of white on load.
+ *
+ * Cascade order (later wins, all three have specificity 0-1-1 or lower):
+ *   :root                                        -> g10
+ *   @media dark  :root:not([data-theme=light])   -> g100
+ *   :root[data-theme=dark]                       -> g100
+ *
+ * Note for anyone mixing in real Carbon markup: vendor/carbon/carbon.css
+ * defines the same tokens under .cds--g10 / .cds--g100 CLASS selectors, which
+ * outrank :root inside their subtree. Put those classes on <body> only if you
+ * intend to override this file for that subtree.
+ *
+ * 328 tokens in g10, 328 in g100.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces */
+  --cds-background: #f4f4f4;
+  --cds-background-active: hsla(0,0%,55.3%,.5);
+  --cds-background-brand: #0f62fe;
+  --cds-background-hover: hsla(0,0%,55.3%,.12);
+  --cds-background-inverse: #393939;
+  --cds-background-inverse-hover: #474747;
+  --cds-background-selected: hsla(0,0%,55.3%,.2);
+  --cds-background-selected-hover: hsla(0,0%,55.3%,.32);
+  --cds-field: var(--cds-field-01,#f4f4f4);
+  --cds-field-01: #fff;
+  --cds-field-02: #f4f4f4;
+  --cds-field-03: #fff;
+  --cds-field-hover: var(--cds-field-hover-01,#e8e8e8);
+  --cds-field-hover-01: #e8e8e8;
+  --cds-field-hover-02: #e8e8e8;
+  --cds-field-hover-03: #e8e8e8;
+  --cds-layer: var(--cds-layer-01,#f4f4f4);
+  --cds-layer-01: #fff;
+  --cds-layer-02: #f4f4f4;
+  --cds-layer-03: #fff;
+  --cds-layer-accent: var(--cds-layer-accent-01,#e0e0e0);
+  --cds-layer-accent-01: #e0e0e0;
+  --cds-layer-accent-02: #e0e0e0;
+  --cds-layer-accent-03: #e0e0e0;
+  --cds-layer-accent-active: var(--cds-layer-accent-active-01,#a8a8a8);
+  --cds-layer-accent-active-01: #a8a8a8;
+  --cds-layer-accent-active-02: #a8a8a8;
+  --cds-layer-accent-active-03: #a8a8a8;
+  --cds-layer-accent-hover: var(--cds-layer-accent-hover-01,#d1d1d1);
+  --cds-layer-accent-hover-01: #d1d1d1;
+  --cds-layer-accent-hover-02: #d1d1d1;
+  --cds-layer-accent-hover-03: #d1d1d1;
+  --cds-layer-active: var(--cds-layer-active-01,#c6c6c6);
+  --cds-layer-active-01: #c6c6c6;
+  --cds-layer-active-02: #c6c6c6;
+  --cds-layer-active-03: #c6c6c6;
+  --cds-layer-background: var(--cds-layer-background-01,#fff);
+  --cds-layer-background-01: #f4f4f4;
+  --cds-layer-background-02: #fff;
+  --cds-layer-background-03: #f4f4f4;
+  --cds-layer-hover: var(--cds-layer-hover-01,#e8e8e8);
+  --cds-layer-hover-01: #e8e8e8;
+  --cds-layer-hover-02: #e8e8e8;
+  --cds-layer-hover-03: #e8e8e8;
+  --cds-layer-selected: var(--cds-layer-selected-01,#e0e0e0);
+  --cds-layer-selected-01: #e0e0e0;
+  --cds-layer-selected-02: #e0e0e0;
+  --cds-layer-selected-03: #e0e0e0;
+  --cds-layer-selected-disabled: #8d8d8d;
+  --cds-layer-selected-hover: var(--cds-layer-selected-hover-01,#d1d1d1);
+  --cds-layer-selected-hover-01: #d1d1d1;
+  --cds-layer-selected-hover-02: #d1d1d1;
+  --cds-layer-selected-hover-03: #d1d1d1;
+  --cds-layer-selected-inverse: #161616;
+
+  /* Text */
+  --cds-text-disabled: rgba(22,22,22,.25);
+  --cds-text-error: #da1e28;
+  --cds-text-helper: #6f6f6f;
+  --cds-text-inverse: #fff;
+  --cds-text-on-color: #fff;
+  --cds-text-on-color-disabled: #8d8d8d;
+  --cds-text-placeholder: rgba(22,22,22,.4);
+  --cds-text-primary: #161616;
+  --cds-text-secondary: #525252;
+
+  /* Icons */
+  --cds-icon-disabled: rgba(22,22,22,.25);
+  --cds-icon-interactive: #0f62fe;
+  --cds-icon-inverse: #fff;
+  --cds-icon-on-color: #fff;
+  --cds-icon-on-color-disabled: #8d8d8d;
+  --cds-icon-primary: #161616;
+  --cds-icon-secondary: #525252;
+
+  /* Borders */
+  --cds-border-disabled: #c6c6c6;
+  --cds-border-interactive: #0f62fe;
+  --cds-border-inverse: #161616;
+  --cds-border-strong: var(--cds-border-strong-01,#8d8d8d);
+  --cds-border-strong-01: #8d8d8d;
+  --cds-border-strong-02: #8d8d8d;
+  --cds-border-strong-03: #8d8d8d;
+  --cds-border-subtle: var(--cds-border-subtle-00,#e0e0e0);
+  --cds-border-subtle-00: #c6c6c6;
+  --cds-border-subtle-01: #e0e0e0;
+  --cds-border-subtle-02: #c6c6c6;
+  --cds-border-subtle-03: #e0e0e0;
+  --cds-border-subtle-selected: var(--cds-border-subtle-selected-01,#c6c6c6);
+  --cds-border-subtle-selected-01: #c6c6c6;
+  --cds-border-subtle-selected-02: #c6c6c6;
+  --cds-border-subtle-selected-03: #c6c6c6;
+  --cds-border-tile: var(--cds-border-tile-01,#c6c6c6);
+  --cds-border-tile-01: #a8a8a8;
+  --cds-border-tile-02: #c6c6c6;
+  --cds-border-tile-03: #a8a8a8;
+
+  /* Links */
+  --cds-link-inverse: #78a9ff;
+  --cds-link-inverse-active: #f4f4f4;
+  --cds-link-inverse-hover: #a6c8ff;
+  --cds-link-inverse-visited: #be95ff;
+  --cds-link-primary: #0f62fe;
+  --cds-link-primary-hover: #0043ce;
+  --cds-link-secondary: #0043ce;
+  --cds-link-visited: #8a3ffc;
+
+  /* Interaction and focus */
+  --cds-focus: #0f62fe;
+  --cds-focus-inset: #fff;
+  --cds-focus-inverse: #fff;
+  --cds-highlight: #d0e2ff;
+  --cds-interactive: #0f62fe;
+  --cds-overlay: rgba(0,0,0,.6);
+  --cds-shadow: rgba(0,0,0,.3);
+  --cds-toggle-off: #8d8d8d;
+
+  /* Status */
+  --cds-support-caution-major: #ff832b;
+  --cds-support-caution-minor: #f1c21b;
+  --cds-support-caution-undefined: #8a3ffc;
+  --cds-support-error: #da1e28;
+  --cds-support-error-inverse: #fa4d56;
+  --cds-support-info: #0043ce;
+  --cds-support-info-inverse: #4589ff;
+  --cds-support-success: #24a148;
+  --cds-support-success-inverse: #42be65;
+  --cds-support-warning: #f1c21b;
+  --cds-support-warning-inverse: #f1c21b;
+
+  /* Buttons */
+  --cds-button-danger-active: #750e13;
+  --cds-button-danger-hover: #b81921;
+  --cds-button-danger-primary: #da1e28;
+  --cds-button-danger-secondary: #da1e28;
+  --cds-button-disabled: #c6c6c6;
+  --cds-button-primary: #0f62fe;
+  --cds-button-primary-active: #002d9c;
+  --cds-button-primary-hover: #0050e6;
+  --cds-button-secondary: #393939;
+  --cds-button-secondary-active: #6f6f6f;
+  --cds-button-secondary-hover: #474747;
+  --cds-button-separator: #e0e0e0;
+  --cds-button-tertiary: #0f62fe;
+  --cds-button-tertiary-active: #002d9c;
+  --cds-button-tertiary-hover: #0050e6;
+
+  /* Tags */
+  --cds-tag-background-blue: #d0e2ff;
+  --cds-tag-background-cool-gray: #dde1e6;
+  --cds-tag-background-cyan: #bae6ff;
+  --cds-tag-background-gray: #e0e0e0;
+  --cds-tag-background-green: #a7f0ba;
+  --cds-tag-background-magenta: #ffd6e8;
+  --cds-tag-background-purple: #e8daff;
+  --cds-tag-background-red: #ffd7d9;
+  --cds-tag-background-teal: #9ef0f0;
+  --cds-tag-background-warm-gray: #e5e0df;
+  --cds-tag-border-blue: #78a9ff;
+  --cds-tag-border-cool-gray: #a2a9b0;
+  --cds-tag-border-cyan: #33b1ff;
+  --cds-tag-border-gray: #a8a8a8;
+  --cds-tag-border-green: #42be65;
+  --cds-tag-border-magenta: #ff7eb6;
+  --cds-tag-border-purple: #be95ff;
+  --cds-tag-border-red: #ff8389;
+  --cds-tag-border-teal: #08bdba;
+  --cds-tag-border-warm-gray: #ada8a8;
+  --cds-tag-color-blue: #0043ce;
+  --cds-tag-color-cool-gray: #121619;
+  --cds-tag-color-cyan: #00539a;
+  --cds-tag-color-gray: #161616;
+  --cds-tag-color-green: #0e6027;
+  --cds-tag-color-magenta: #9f1853;
+  --cds-tag-color-purple: #6929c4;
+  --cds-tag-color-red: #a2191f;
+  --cds-tag-color-teal: #005d5d;
+  --cds-tag-color-warm-gray: #171414;
+  --cds-tag-hover-blue: #b8d3ff;
+  --cds-tag-hover-cool-gray: #cdd3da;
+  --cds-tag-hover-cyan: #99daff;
+  --cds-tag-hover-gray: #d1d1d1;
+  --cds-tag-hover-green: #74e792;
+  --cds-tag-hover-magenta: #ffbdda;
+  --cds-tag-hover-purple: #dcc7ff;
+  --cds-tag-hover-red: #ffc2c5;
+  --cds-tag-hover-teal: #57e5e5;
+  --cds-tag-hover-warm-gray: #d8d0cf;
+
+  /* Notifications */
+  --cds-notification-action-hover: #fff;
+  --cds-notification-action-tertiary-inverse: #fff;
+  --cds-notification-action-tertiary-inverse-active: #c6c6c6;
+  --cds-notification-action-tertiary-inverse-hover: #f4f4f4;
+  --cds-notification-action-tertiary-inverse-text: #161616;
+  --cds-notification-action-tertiary-inverse-text-on-color-disabled: hsla(0,0%,100%,.25);
+  --cds-notification-background-error: #fff1f1;
+  --cds-notification-background-info: #edf5ff;
+  --cds-notification-background-success: #defbe6;
+  --cds-notification-background-warning: #fcf4d6;
+
+  /* Skeleton */
+  --cds-skeleton-background: #e8e8e8;
+  --cds-skeleton-element: #c6c6c6;
+
+  /* Application (not from Carbon — see EXTRA_THEMED) */
+  --a2c-amber: #8a3800;
+
+  /* Component-specific */
+  --cds-ai-aura-end: hsla(0,0%,100%,0);
+  --cds-ai-aura-hover-background: #edf5ff;
+  --cds-ai-aura-hover-end: hsla(0,0%,100%,0);
+  --cds-ai-aura-hover-start: rgba(69,137,255,.32);
+  --cds-ai-aura-start: rgba(69,137,255,.1);
+  --cds-ai-aura-start-sm: rgba(69,137,255,.16);
+  --cds-ai-border-end: #78a9ff;
+  --cds-ai-border-start: rgba(166,200,255,.64);
+  --cds-ai-border-strong: #4589ff;
+  --cds-ai-drop-shadow: rgba(15,98,254,.1);
+  --cds-ai-inner-shadow: rgba(69,137,255,.1);
+  --cds-ai-overlay: rgba(0,17,65,.5);
+  --cds-ai-popover-background: #fff;
+  --cds-ai-popover-caret-bottom: #78a9ff;
+  --cds-ai-popover-caret-bottom-background: #eaf1ff;
+  --cds-ai-popover-caret-bottom-background-actions: #e9effa;
+  --cds-ai-popover-caret-center: #a0c3ff;
+  --cds-ai-popover-shadow-outer-01: rgba(0,67,206,.06);
+  --cds-ai-popover-shadow-outer-02: rgba(0,0,0,.04);
+  --cds-ai-skeleton-background: #d0e2ff;
+  --cds-ai-skeleton-element-background: #4589ff;
+  --cds-chat-avatar-agent: #393939;
+  --cds-chat-avatar-bot: #6f6f6f;
+  --cds-chat-avatar-user: #0f62fe;
+  --cds-chat-bubble-agent: #fff;
+  --cds-chat-bubble-agent-text: #161616;
+  --cds-chat-bubble-border: #e0e0e0;
+  --cds-chat-bubble-user: #e0e0e0;
+  --cds-chat-bubble-user-text: #161616;
+  --cds-chat-button: #0f62fe;
+  --cds-chat-button-active: hsla(0,0%,55.3%,.5);
+  --cds-chat-button-hover: hsla(0,0%,55.3%,.12);
+  --cds-chat-button-selected: hsla(0,0%,55.3%,.2);
+  --cds-chat-button-text-hover: #0043ce;
+  --cds-chat-button-text-selected: #525252;
+  --cds-chat-header-background: #fff;
+  --cds-chat-header-text: #161616;
+  --cds-chat-prompt-background: #fff;
+  --cds-chat-prompt-border-end: hsla(0,0%,95.7%,0);
+  --cds-chat-prompt-border-start: #f4f4f4;
+  --cds-chat-prompt-text: #161616;
+  --cds-chat-shell-background: #fff;
+  --cds-color-scheme: light;
+  --cds-content-switcher-background: #e0e0e0;
+  --cds-content-switcher-background-hover: #d1d1d1;
+  --cds-content-switcher-selected: #fff;
+  --cds-status-blue: #0043ce;
+  --cds-status-gray: #6f6f6f;
+  --cds-status-green: #24a148;
+  --cds-status-orange: #ff832b;
+  --cds-status-orange-outline: #ba4e00;
+  --cds-status-purple: #8a3ffc;
+  --cds-status-red: #da1e28;
+  --cds-status-yellow: #f1c21b;
+  --cds-status-yellow-outline: #8e6a00;
+  --cds-syntax-angle-bracket: #697077;
+  --cds-syntax-annotation: #007d79;
+  --cds-syntax-arithmetic-operator: #343a3f;
+  --cds-syntax-atom: #161616;
+  --cds-syntax-attribute: #00539a;
+  --cds-syntax-attribute-name: #00539a;
+  --cds-syntax-attribute-value: #161616;
+  --cds-syntax-bitwise-operator: #343a3f;
+  --cds-syntax-block-comment: #198038;
+  --cds-syntax-bool: #161616;
+  --cds-syntax-brace: #343a3f;
+  --cds-syntax-bracket: #343a3f;
+  --cds-syntax-character: #161616;
+  --cds-syntax-class-name: #007d79;
+  --cds-syntax-color: #161616;
+  --cds-syntax-comment: #198038;
+  --cds-syntax-compare-operator: #343a3f;
+  --cds-syntax-constant: #0f62fe;
+  --cds-syntax-content: #161616;
+  --cds-syntax-content-separator: #343a3f;
+  --cds-syntax-control-keyword: #6929c4;
+  --cds-syntax-control-operator: #6929c4;
+  --cds-syntax-definition: #00539a;
+  --cds-syntax-definition-keyword: #00539a;
+  --cds-syntax-definition-operator: #00539a;
+  --cds-syntax-deleted: #ffd7d9;
+  --cds-syntax-deref-operator: #343a3f;
+  --cds-syntax-doc-comment: #198038;
+  --cds-syntax-doc-string: #161616;
+  --cds-syntax-document-meta: #198038;
+  --cds-syntax-emphasis: #161616;
+  --cds-syntax-escape: #343a3f;
+  --cds-syntax-float: #198038;
+  --cds-syntax-function: #8e6a00;
+  --cds-syntax-heading: #00539a;
+  --cds-syntax-heading-1: #00539a;
+  --cds-syntax-heading-2: #00539a;
+  --cds-syntax-heading-3: #00539a;
+  --cds-syntax-heading-4: #00539a;
+  --cds-syntax-heading-5: #00539a;
+  --cds-syntax-heading-6: #00539a;
+  --cds-syntax-inserted: #a7f0ba;
+  --cds-syntax-integer: #198038;
+  --cds-syntax-invalid: #da1e28;
+  --cds-syntax-keyword: #0f62fe;
+  --cds-syntax-label-name: #0f62fe;
+  --cds-syntax-line-comment: #198038;
+  --cds-syntax-link: #0f62fe;
+  --cds-syntax-list: #161616;
+  --cds-syntax-literal: #161616;
+  --cds-syntax-local: #0f62fe;
+  --cds-syntax-logic-operator: #343a3f;
+  --cds-syntax-macro-name: #161616;
+  --cds-syntax-meta: #198038;
+  --cds-syntax-modifier: #0f62fe;
+  --cds-syntax-module-keyword: #6929c4;
+  --cds-syntax-monospace: #161616;
+  --cds-syntax-name: #0f62fe;
+  --cds-syntax-namespace: #007d79;
+  --cds-syntax-null: #161616;
+  --cds-syntax-number: #198038;
+  --cds-syntax-operator: #343a3f;
+  --cds-syntax-operator-keyword: #0f62fe;
+  --cds-syntax-paren: #343a3f;
+  --cds-syntax-processing-instruction: #161616;
+  --cds-syntax-property-name: #00539a;
+  --cds-syntax-punctuation: #343a3f;
+  --cds-syntax-quote: #198038;
+  --cds-syntax-regexp: #6929c4;
+  --cds-syntax-self: #007d79;
+  --cds-syntax-separator: #343a3f;
+  --cds-syntax-special: #0f62fe;
+  --cds-syntax-special-string: #8a3ffc;
+  --cds-syntax-square-bracket: #343a3f;
+  --cds-syntax-standard: #0f62fe;
+  --cds-syntax-strikethrough: #161616;
+  --cds-syntax-string: #161616;
+  --cds-syntax-strong: #161616;
+  --cds-syntax-tag: #007d79;
+  --cds-syntax-tag-name: #007d79;
+  --cds-syntax-type: #007d79;
+  --cds-syntax-type-name: #007d79;
+  --cds-syntax-type-operator: #007d79;
+  --cds-syntax-unit: #198038;
+  --cds-syntax-update-operator: #343a3f;
+  --cds-syntax-url: #343a3f;
+  --cds-syntax-variable: #0f62fe;
+  --cds-syntax-variable-name: #0f62fe;
+}
+
+/* Follow the OS, unless the user pinned light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --a2c-amber: #ffb784;
+    --cds-ai-aura-end: transparent;
+    --cds-ai-aura-hover-background: #333;
+    --cds-ai-aura-hover-end: transparent;
+    --cds-ai-aura-hover-start: rgba(69,137,255,.4);
+    --cds-ai-aura-start: rgba(69,137,255,.1);
+    --cds-ai-aura-start-sm: rgba(69,137,255,.16);
+    --cds-ai-border-end: #4589ff;
+    --cds-ai-border-start: rgba(166,200,255,.36);
+    --cds-ai-border-strong: #78a9ff;
+    --cds-ai-drop-shadow: rgba(0,0,0,.28);
+    --cds-ai-inner-shadow: rgba(69,137,255,.16);
+    --cds-ai-overlay: rgba(0,0,0,.5);
+    --cds-ai-popover-background: #161616;
+    --cds-ai-popover-caret-bottom: #4589ff;
+    --cds-ai-popover-caret-bottom-background: #202d45;
+    --cds-ai-popover-caret-bottom-background-actions: #1e283a;
+    --cds-ai-popover-caret-center: #4870b5;
+    --cds-ai-popover-shadow-outer-01: rgba(0,0,0,.12);
+    --cds-ai-popover-shadow-outer-02: rgba(0,0,0,.08);
+    --cds-ai-skeleton-background: rgba(120,169,255,.5);
+    --cds-ai-skeleton-element-background: rgba(120,169,255,.3);
+    --cds-background: #161616;
+    --cds-background-active: hsla(0,0%,55.3%,.4);
+    --cds-background-brand: #0f62fe;
+    --cds-background-hover: hsla(0,0%,55.3%,.16);
+    --cds-background-inverse: #f4f4f4;
+    --cds-background-inverse-hover: #e8e8e8;
+    --cds-background-selected: hsla(0,0%,55.3%,.24);
+    --cds-background-selected-hover: hsla(0,0%,55.3%,.32);
+    --cds-border-disabled: hsla(0,0%,55.3%,.5);
+    --cds-border-interactive: #4589ff;
+    --cds-border-inverse: #f4f4f4;
+    --cds-border-strong: var(--cds-border-strong-01,#8d8d8d);
+    --cds-border-strong-01: #6f6f6f;
+    --cds-border-strong-02: #8d8d8d;
+    --cds-border-strong-03: #a8a8a8;
+    --cds-border-subtle: var(--cds-border-subtle-00,#e0e0e0);
+    --cds-border-subtle-00: #393939;
+    --cds-border-subtle-01: #525252;
+    --cds-border-subtle-02: #6f6f6f;
+    --cds-border-subtle-03: #6f6f6f;
+    --cds-border-subtle-selected: var(--cds-border-subtle-selected-01,#c6c6c6);
+    --cds-border-subtle-selected-01: #6f6f6f;
+    --cds-border-subtle-selected-02: #8d8d8d;
+    --cds-border-subtle-selected-03: #8d8d8d;
+    --cds-border-tile: var(--cds-border-tile-01,#c6c6c6);
+    --cds-border-tile-01: #525252;
+    --cds-border-tile-02: #6f6f6f;
+    --cds-border-tile-03: #8d8d8d;
+    --cds-button-danger-active: #750e13;
+    --cds-button-danger-hover: #b81921;
+    --cds-button-danger-primary: #da1e28;
+    --cds-button-danger-secondary: #fa4d56;
+    --cds-button-disabled: hsla(0,0%,55.3%,.3);
+    --cds-button-primary: #0f62fe;
+    --cds-button-primary-active: #002d9c;
+    --cds-button-primary-hover: #0050e6;
+    --cds-button-secondary: #6f6f6f;
+    --cds-button-secondary-active: #393939;
+    --cds-button-secondary-hover: #5e5e5e;
+    --cds-button-separator: #161616;
+    --cds-button-tertiary: #fff;
+    --cds-button-tertiary-active: #c6c6c6;
+    --cds-button-tertiary-hover: #f4f4f4;
+    --cds-chat-avatar-agent: #c6c6c6;
+    --cds-chat-avatar-bot: #8d8d8d;
+    --cds-chat-avatar-user: #4589ff;
+    --cds-chat-bubble-agent: #262626;
+    --cds-chat-bubble-agent-text: #f4f4f4;
+    --cds-chat-bubble-border: #525252;
+    --cds-chat-bubble-user: #393939;
+    --cds-chat-bubble-user-text: #f4f4f4;
+    --cds-chat-button: #78a9ff;
+    --cds-chat-button-active: hsla(0,0%,55.3%,.4);
+    --cds-chat-button-hover: hsla(0,0%,55.3%,.16);
+    --cds-chat-button-selected: hsla(0,0%,55.3%,.24);
+    --cds-chat-button-text-hover: #a6c8ff;
+    --cds-chat-button-text-selected: #c6c6c6;
+    --cds-chat-header-background: #262626;
+    --cds-chat-header-text: #f4f4f4;
+    --cds-chat-prompt-background: #161616;
+    --cds-chat-prompt-border-end: rgba(38,38,38,0);
+    --cds-chat-prompt-border-start: #262626;
+    --cds-chat-prompt-text: #f4f4f4;
+    --cds-chat-shell-background: #262626;
+    --cds-color-scheme: dark;
+    --cds-content-switcher-background: transparent;
+    --cds-content-switcher-background-hover: hsla(0,0%,55.3%,.12);
+    --cds-content-switcher-selected: hsla(0,0%,55.3%,.24);
+    --cds-field: var(--cds-field-01,#f4f4f4);
+    --cds-field-01: #262626;
+    --cds-field-02: #393939;
+    --cds-field-03: #525252;
+    --cds-field-hover: var(--cds-field-hover-01,#e8e8e8);
+    --cds-field-hover-01: #333;
+    --cds-field-hover-02: #474747;
+    --cds-field-hover-03: #636363;
+    --cds-focus: #fff;
+    --cds-focus-inset: #161616;
+    --cds-focus-inverse: #0f62fe;
+    --cds-highlight: #001d6c;
+    --cds-icon-disabled: hsla(0,0%,95.7%,.25);
+    --cds-icon-interactive: #fff;
+    --cds-icon-inverse: #161616;
+    --cds-icon-on-color: #fff;
+    --cds-icon-on-color-disabled: hsla(0,0%,100%,.25);
+    --cds-icon-primary: #f4f4f4;
+    --cds-icon-secondary: #c6c6c6;
+    --cds-interactive: #4589ff;
+    --cds-layer: var(--cds-layer-01,#f4f4f4);
+    --cds-layer-01: #262626;
+    --cds-layer-02: #393939;
+    --cds-layer-03: #525252;
+    --cds-layer-accent: var(--cds-layer-accent-01,#e0e0e0);
+    --cds-layer-accent-01: #393939;
+    --cds-layer-accent-02: #525252;
+    --cds-layer-accent-03: #6f6f6f;
+    --cds-layer-accent-active: var(--cds-layer-accent-active-01,#a8a8a8);
+    --cds-layer-accent-active-01: #6f6f6f;
+    --cds-layer-accent-active-02: #8d8d8d;
+    --cds-layer-accent-active-03: #393939;
+    --cds-layer-accent-hover: var(--cds-layer-accent-hover-01,#d1d1d1);
+    --cds-layer-accent-hover-01: #474747;
+    --cds-layer-accent-hover-02: #636363;
+    --cds-layer-accent-hover-03: #5e5e5e;
+    --cds-layer-active: var(--cds-layer-active-01,#c6c6c6);
+    --cds-layer-active-01: #525252;
+    --cds-layer-active-02: #6f6f6f;
+    --cds-layer-active-03: #8d8d8d;
+    --cds-layer-background: var(--cds-layer-background-01,#fff);
+    --cds-layer-background-01: #161616;
+    --cds-layer-background-02: #262626;
+    --cds-layer-background-03: #393939;
+    --cds-layer-hover: var(--cds-layer-hover-01,#e8e8e8);
+    --cds-layer-hover-01: #333;
+    --cds-layer-hover-02: #474747;
+    --cds-layer-hover-03: #636363;
+    --cds-layer-selected: var(--cds-layer-selected-01,#e0e0e0);
+    --cds-layer-selected-01: #393939;
+    --cds-layer-selected-02: #525252;
+    --cds-layer-selected-03: #6f6f6f;
+    --cds-layer-selected-disabled: #a8a8a8;
+    --cds-layer-selected-hover: var(--cds-layer-selected-hover-01,#d1d1d1);
+    --cds-layer-selected-hover-01: #474747;
+    --cds-layer-selected-hover-02: #636363;
+    --cds-layer-selected-hover-03: #5e5e5e;
+    --cds-layer-selected-inverse: #f4f4f4;
+    --cds-link-inverse: #0f62fe;
+    --cds-link-inverse-active: #161616;
+    --cds-link-inverse-hover: #0043ce;
+    --cds-link-inverse-visited: #8a3ffc;
+    --cds-link-primary: #78a9ff;
+    --cds-link-primary-hover: #a6c8ff;
+    --cds-link-secondary: #a6c8ff;
+    --cds-link-visited: #be95ff;
+    --cds-notification-action-hover: #78a9ff;
+    --cds-notification-action-tertiary-inverse: #0f62fe;
+    --cds-notification-action-tertiary-inverse-active: #002d9c;
+    --cds-notification-action-tertiary-inverse-hover: #0050e6;
+    --cds-notification-action-tertiary-inverse-text: #fff;
+    --cds-notification-action-tertiary-inverse-text-on-color-disabled: #8d8d8d;
+    --cds-notification-background-error: #262626;
+    --cds-notification-background-info: #262626;
+    --cds-notification-background-success: #262626;
+    --cds-notification-background-warning: #262626;
+    --cds-overlay: rgba(0,0,0,.6);
+    --cds-shadow: rgba(0,0,0,.8);
+    --cds-skeleton-background: #292929;
+    --cds-skeleton-element: #393939;
+    --cds-status-blue: #4589ff;
+    --cds-status-gray: #8d8d8d;
+    --cds-status-green: #42be65;
+    --cds-status-orange: #ff832b;
+    --cds-status-orange-outline: #ff832b;
+    --cds-status-purple: #a56eff;
+    --cds-status-red: #fa4d56;
+    --cds-status-yellow: #f1c21b;
+    --cds-status-yellow-outline: #f1c21b;
+    --cds-support-caution-major: #ff832b;
+    --cds-support-caution-minor: #f1c21b;
+    --cds-support-caution-undefined: #a56eff;
+    --cds-support-error: #fa4d56;
+    --cds-support-error-inverse: #da1e28;
+    --cds-support-info: #4589ff;
+    --cds-support-info-inverse: #0043ce;
+    --cds-support-success: #42be65;
+    --cds-support-success-inverse: #24a148;
+    --cds-support-warning: #f1c21b;
+    --cds-support-warning-inverse: #f1c21b;
+    --cds-syntax-angle-bracket: #8d8d8d;
+    --cds-syntax-annotation: #08bdba;
+    --cds-syntax-arithmetic-operator: #e0e0e0;
+    --cds-syntax-atom: #f4f4f4;
+    --cds-syntax-attribute: #33b1ff;
+    --cds-syntax-attribute-name: #33b1ff;
+    --cds-syntax-attribute-value: #f4f4f4;
+    --cds-syntax-bitwise-operator: #e0e0e0;
+    --cds-syntax-block-comment: #42be65;
+    --cds-syntax-bool: #f4f4f4;
+    --cds-syntax-brace: #e0e0e0;
+    --cds-syntax-bracket: #e0e0e0;
+    --cds-syntax-character: #f4f4f4;
+    --cds-syntax-class-name: #3ddbd9;
+    --cds-syntax-color: #f4f4f4;
+    --cds-syntax-comment: #42be65;
+    --cds-syntax-compare-operator: #e0e0e0;
+    --cds-syntax-constant: #4589ff;
+    --cds-syntax-content: #f4f4f4;
+    --cds-syntax-content-separator: #e0e0e0;
+    --cds-syntax-control-keyword: #be95ff;
+    --cds-syntax-control-operator: #be95ff;
+    --cds-syntax-definition: #33b1ff;
+    --cds-syntax-definition-keyword: #33b1ff;
+    --cds-syntax-definition-operator: #33b1ff;
+    --cds-syntax-deleted: #a2191f;
+    --cds-syntax-deref-operator: #e0e0e0;
+    --cds-syntax-doc-comment: #42be65;
+    --cds-syntax-doc-string: #f4f4f4;
+    --cds-syntax-document-meta: #42be65;
+    --cds-syntax-emphasis: #f4f4f4;
+    --cds-syntax-escape: #e0e0e0;
+    --cds-syntax-float: #6fdc8c;
+    --cds-syntax-function: #f1c21b;
+    --cds-syntax-heading: #33b1ff;
+    --cds-syntax-heading-1: #33b1ff;
+    --cds-syntax-heading-2: #33b1ff;
+    --cds-syntax-heading-3: #33b1ff;
+    --cds-syntax-heading-4: #33b1ff;
+    --cds-syntax-heading-5: #33b1ff;
+    --cds-syntax-heading-6: #33b1ff;
+    --cds-syntax-inserted: #198038;
+    --cds-syntax-integer: #6fdc8c;
+    --cds-syntax-invalid: #fa4d56;
+    --cds-syntax-keyword: #4589ff;
+    --cds-syntax-label-name: #a6c8ff;
+    --cds-syntax-line-comment: #42be65;
+    --cds-syntax-link: #4589ff;
+    --cds-syntax-list: #f4f4f4;
+    --cds-syntax-literal: #f4f4f4;
+    --cds-syntax-local: #a6c8ff;
+    --cds-syntax-logic-operator: #e0e0e0;
+    --cds-syntax-macro-name: #f4f4f4;
+    --cds-syntax-meta: #42be65;
+    --cds-syntax-modifier: #4589ff;
+    --cds-syntax-module-keyword: #be95ff;
+    --cds-syntax-monospace: #f4f4f4;
+    --cds-syntax-name: #a6c8ff;
+    --cds-syntax-namespace: #3ddbd9;
+    --cds-syntax-null: #f4f4f4;
+    --cds-syntax-number: #6fdc8c;
+    --cds-syntax-operator: #e0e0e0;
+    --cds-syntax-operator-keyword: #4589ff;
+    --cds-syntax-paren: #e0e0e0;
+    --cds-syntax-processing-instruction: #f4f4f4;
+    --cds-syntax-property-name: #33b1ff;
+    --cds-syntax-punctuation: #e0e0e0;
+    --cds-syntax-quote: #42be65;
+    --cds-syntax-regexp: #be95ff;
+    --cds-syntax-self: #3ddbd9;
+    --cds-syntax-separator: #e0e0e0;
+    --cds-syntax-special: #4589ff;
+    --cds-syntax-special-string: #be95ff;
+    --cds-syntax-square-bracket: #e0e0e0;
+    --cds-syntax-standard: #4589ff;
+    --cds-syntax-strikethrough: #f4f4f4;
+    --cds-syntax-string: #f4f4f4;
+    --cds-syntax-strong: #f4f4f4;
+    --cds-syntax-tag: #3ddbd9;
+    --cds-syntax-tag-name: #3ddbd9;
+    --cds-syntax-type: #3ddbd9;
+    --cds-syntax-type-name: #3ddbd9;
+    --cds-syntax-type-operator: #3ddbd9;
+    --cds-syntax-unit: #6fdc8c;
+    --cds-syntax-update-operator: #e0e0e0;
+    --cds-syntax-url: #e0e0e0;
+    --cds-syntax-variable: #a6c8ff;
+    --cds-syntax-variable-name: #a6c8ff;
+    --cds-tag-background-blue: #0043ce;
+    --cds-tag-background-cool-gray: #4d5358;
+    --cds-tag-background-cyan: #00539a;
+    --cds-tag-background-gray: #525252;
+    --cds-tag-background-green: #0e6027;
+    --cds-tag-background-magenta: #9f1853;
+    --cds-tag-background-purple: #6929c4;
+    --cds-tag-background-red: #a2191f;
+    --cds-tag-background-teal: #005d5d;
+    --cds-tag-background-warm-gray: #565151;
+    --cds-tag-border-blue: #4589ff;
+    --cds-tag-border-cool-gray: #878d96;
+    --cds-tag-border-cyan: #1192e8;
+    --cds-tag-border-gray: #8d8d8d;
+    --cds-tag-border-green: #24a148;
+    --cds-tag-border-magenta: #ee5396;
+    --cds-tag-border-purple: #a56eff;
+    --cds-tag-border-red: #fa4d56;
+    --cds-tag-border-teal: #009d9a;
+    --cds-tag-border-warm-gray: #8f8b8b;
+    --cds-tag-color-blue: #d0e2ff;
+    --cds-tag-color-cool-gray: #f2f4f8;
+    --cds-tag-color-cyan: #bae6ff;
+    --cds-tag-color-gray: #f4f4f4;
+    --cds-tag-color-green: #a7f0ba;
+    --cds-tag-color-magenta: #ffd6e8;
+    --cds-tag-color-purple: #e8daff;
+    --cds-tag-color-red: #ffd7d9;
+    --cds-tag-color-teal: #9ef0f0;
+    --cds-tag-color-warm-gray: #f7f3f2;
+    --cds-tag-hover-blue: #0053ff;
+    --cds-tag-hover-cool-gray: #5d646a;
+    --cds-tag-hover-cyan: #0066bd;
+    --cds-tag-hover-gray: #636363;
+    --cds-tag-hover-green: #11742f;
+    --cds-tag-hover-magenta: #bf1d63;
+    --cds-tag-hover-purple: #7c3dd6;
+    --cds-tag-hover-red: #c21e25;
+    --cds-tag-hover-teal: #007070;
+    --cds-tag-hover-warm-gray: #696363;
+    --cds-text-disabled: hsla(0,0%,95.7%,.25);
+    --cds-text-error: #ff8389;
+    --cds-text-helper: #a8a8a8;
+    --cds-text-inverse: #161616;
+    --cds-text-on-color: #fff;
+    --cds-text-on-color-disabled: hsla(0,0%,100%,.25);
+    --cds-text-placeholder: hsla(0,0%,95.7%,.4);
+    --cds-text-primary: #f4f4f4;
+    --cds-text-secondary: #c6c6c6;
+    --cds-toggle-off: #6f6f6f;
+  }
+}
+
+/* Explicit pin. Beats the OS in both directions. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --a2c-amber: #ffb784;
+  --cds-ai-aura-end: transparent;
+  --cds-ai-aura-hover-background: #333;
+  --cds-ai-aura-hover-end: transparent;
+  --cds-ai-aura-hover-start: rgba(69,137,255,.4);
+  --cds-ai-aura-start: rgba(69,137,255,.1);
+  --cds-ai-aura-start-sm: rgba(69,137,255,.16);
+  --cds-ai-border-end: #4589ff;
+  --cds-ai-border-start: rgba(166,200,255,.36);
+  --cds-ai-border-strong: #78a9ff;
+  --cds-ai-drop-shadow: rgba(0,0,0,.28);
+  --cds-ai-inner-shadow: rgba(69,137,255,.16);
+  --cds-ai-overlay: rgba(0,0,0,.5);
+  --cds-ai-popover-background: #161616;
+  --cds-ai-popover-caret-bottom: #4589ff;
+  --cds-ai-popover-caret-bottom-background: #202d45;
+  --cds-ai-popover-caret-bottom-background-actions: #1e283a;
+  --cds-ai-popover-caret-center: #4870b5;
+  --cds-ai-popover-shadow-outer-01: rgba(0,0,0,.12);
+  --cds-ai-popover-shadow-outer-02: rgba(0,0,0,.08);
+  --cds-ai-skeleton-background: rgba(120,169,255,.5);
+  --cds-ai-skeleton-element-background: rgba(120,169,255,.3);
+  --cds-background: #161616;
+  --cds-background-active: hsla(0,0%,55.3%,.4);
+  --cds-background-brand: #0f62fe;
+  --cds-background-hover: hsla(0,0%,55.3%,.16);
+  --cds-background-inverse: #f4f4f4;
+  --cds-background-inverse-hover: #e8e8e8;
+  --cds-background-selected: hsla(0,0%,55.3%,.24);
+  --cds-background-selected-hover: hsla(0,0%,55.3%,.32);
+  --cds-border-disabled: hsla(0,0%,55.3%,.5);
+  --cds-border-interactive: #4589ff;
+  --cds-border-inverse: #f4f4f4;
+  --cds-border-strong: var(--cds-border-strong-01,#8d8d8d);
+  --cds-border-strong-01: #6f6f6f;
+  --cds-border-strong-02: #8d8d8d;
+  --cds-border-strong-03: #a8a8a8;
+  --cds-border-subtle: var(--cds-border-subtle-00,#e0e0e0);
+  --cds-border-subtle-00: #393939;
+  --cds-border-subtle-01: #525252;
+  --cds-border-subtle-02: #6f6f6f;
+  --cds-border-subtle-03: #6f6f6f;
+  --cds-border-subtle-selected: var(--cds-border-subtle-selected-01,#c6c6c6);
+  --cds-border-subtle-selected-01: #6f6f6f;
+  --cds-border-subtle-selected-02: #8d8d8d;
+  --cds-border-subtle-selected-03: #8d8d8d;
+  --cds-border-tile: var(--cds-border-tile-01,#c6c6c6);
+  --cds-border-tile-01: #525252;
+  --cds-border-tile-02: #6f6f6f;
+  --cds-border-tile-03: #8d8d8d;
+  --cds-button-danger-active: #750e13;
+  --cds-button-danger-hover: #b81921;
+  --cds-button-danger-primary: #da1e28;
+  --cds-button-danger-secondary: #fa4d56;
+  --cds-button-disabled: hsla(0,0%,55.3%,.3);
+  --cds-button-primary: #0f62fe;
+  --cds-button-primary-active: #002d9c;
+  --cds-button-primary-hover: #0050e6;
+  --cds-button-secondary: #6f6f6f;
+  --cds-button-secondary-active: #393939;
+  --cds-button-secondary-hover: #5e5e5e;
+  --cds-button-separator: #161616;
+  --cds-button-tertiary: #fff;
+  --cds-button-tertiary-active: #c6c6c6;
+  --cds-button-tertiary-hover: #f4f4f4;
+  --cds-chat-avatar-agent: #c6c6c6;
+  --cds-chat-avatar-bot: #8d8d8d;
+  --cds-chat-avatar-user: #4589ff;
+  --cds-chat-bubble-agent: #262626;
+  --cds-chat-bubble-agent-text: #f4f4f4;
+  --cds-chat-bubble-border: #525252;
+  --cds-chat-bubble-user: #393939;
+  --cds-chat-bubble-user-text: #f4f4f4;
+  --cds-chat-button: #78a9ff;
+  --cds-chat-button-active: hsla(0,0%,55.3%,.4);
+  --cds-chat-button-hover: hsla(0,0%,55.3%,.16);
+  --cds-chat-button-selected: hsla(0,0%,55.3%,.24);
+  --cds-chat-button-text-hover: #a6c8ff;
+  --cds-chat-button-text-selected: #c6c6c6;
+  --cds-chat-header-background: #262626;
+  --cds-chat-header-text: #f4f4f4;
+  --cds-chat-prompt-background: #161616;
+  --cds-chat-prompt-border-end: rgba(38,38,38,0);
+  --cds-chat-prompt-border-start: #262626;
+  --cds-chat-prompt-text: #f4f4f4;
+  --cds-chat-shell-background: #262626;
+  --cds-color-scheme: dark;
+  --cds-content-switcher-background: transparent;
+  --cds-content-switcher-background-hover: hsla(0,0%,55.3%,.12);
+  --cds-content-switcher-selected: hsla(0,0%,55.3%,.24);
+  --cds-field: var(--cds-field-01,#f4f4f4);
+  --cds-field-01: #262626;
+  --cds-field-02: #393939;
+  --cds-field-03: #525252;
+  --cds-field-hover: var(--cds-field-hover-01,#e8e8e8);
+  --cds-field-hover-01: #333;
+  --cds-field-hover-02: #474747;
+  --cds-field-hover-03: #636363;
+  --cds-focus: #fff;
+  --cds-focus-inset: #161616;
+  --cds-focus-inverse: #0f62fe;
+  --cds-highlight: #001d6c;
+  --cds-icon-disabled: hsla(0,0%,95.7%,.25);
+  --cds-icon-interactive: #fff;
+  --cds-icon-inverse: #161616;
+  --cds-icon-on-color: #fff;
+  --cds-icon-on-color-disabled: hsla(0,0%,100%,.25);
+  --cds-icon-primary: #f4f4f4;
+  --cds-icon-secondary: #c6c6c6;
+  --cds-interactive: #4589ff;
+  --cds-layer: var(--cds-layer-01,#f4f4f4);
+  --cds-layer-01: #262626;
+  --cds-layer-02: #393939;
+  --cds-layer-03: #525252;
+  --cds-layer-accent: var(--cds-layer-accent-01,#e0e0e0);
+  --cds-layer-accent-01: #393939;
+  --cds-layer-accent-02: #525252;
+  --cds-layer-accent-03: #6f6f6f;
+  --cds-layer-accent-active: var(--cds-layer-accent-active-01,#a8a8a8);
+  --cds-layer-accent-active-01: #6f6f6f;
+  --cds-layer-accent-active-02: #8d8d8d;
+  --cds-layer-accent-active-03: #393939;
+  --cds-layer-accent-hover: var(--cds-layer-accent-hover-01,#d1d1d1);
+  --cds-layer-accent-hover-01: #474747;
+  --cds-layer-accent-hover-02: #636363;
+  --cds-layer-accent-hover-03: #5e5e5e;
+  --cds-layer-active: var(--cds-layer-active-01,#c6c6c6);
+  --cds-layer-active-01: #525252;
+  --cds-layer-active-02: #6f6f6f;
+  --cds-layer-active-03: #8d8d8d;
+  --cds-layer-background: var(--cds-layer-background-01,#fff);
+  --cds-layer-background-01: #161616;
+  --cds-layer-background-02: #262626;
+  --cds-layer-background-03: #393939;
+  --cds-layer-hover: var(--cds-layer-hover-01,#e8e8e8);
+  --cds-layer-hover-01: #333;
+  --cds-layer-hover-02: #474747;
+  --cds-layer-hover-03: #636363;
+  --cds-layer-selected: var(--cds-layer-selected-01,#e0e0e0);
+  --cds-layer-selected-01: #393939;
+  --cds-layer-selected-02: #525252;
+  --cds-layer-selected-03: #6f6f6f;
+  --cds-layer-selected-disabled: #a8a8a8;
+  --cds-layer-selected-hover: var(--cds-layer-selected-hover-01,#d1d1d1);
+  --cds-layer-selected-hover-01: #474747;
+  --cds-layer-selected-hover-02: #636363;
+  --cds-layer-selected-hover-03: #5e5e5e;
+  --cds-layer-selected-inverse: #f4f4f4;
+  --cds-link-inverse: #0f62fe;
+  --cds-link-inverse-active: #161616;
+  --cds-link-inverse-hover: #0043ce;
+  --cds-link-inverse-visited: #8a3ffc;
+  --cds-link-primary: #78a9ff;
+  --cds-link-primary-hover: #a6c8ff;
+  --cds-link-secondary: #a6c8ff;
+  --cds-link-visited: #be95ff;
+  --cds-notification-action-hover: #78a9ff;
+  --cds-notification-action-tertiary-inverse: #0f62fe;
+  --cds-notification-action-tertiary-inverse-active: #002d9c;
+  --cds-notification-action-tertiary-inverse-hover: #0050e6;
+  --cds-notification-action-tertiary-inverse-text: #fff;
+  --cds-notification-action-tertiary-inverse-text-on-color-disabled: #8d8d8d;
+  --cds-notification-background-error: #262626;
+  --cds-notification-background-info: #262626;
+  --cds-notification-background-success: #262626;
+  --cds-notification-background-warning: #262626;
+  --cds-overlay: rgba(0,0,0,.6);
+  --cds-shadow: rgba(0,0,0,.8);
+  --cds-skeleton-background: #292929;
+  --cds-skeleton-element: #393939;
+  --cds-status-blue: #4589ff;
+  --cds-status-gray: #8d8d8d;
+  --cds-status-green: #42be65;
+  --cds-status-orange: #ff832b;
+  --cds-status-orange-outline: #ff832b;
+  --cds-status-purple: #a56eff;
+  --cds-status-red: #fa4d56;
+  --cds-status-yellow: #f1c21b;
+  --cds-status-yellow-outline: #f1c21b;
+  --cds-support-caution-major: #ff832b;
+  --cds-support-caution-minor: #f1c21b;
+  --cds-support-caution-undefined: #a56eff;
+  --cds-support-error: #fa4d56;
+  --cds-support-error-inverse: #da1e28;
+  --cds-support-info: #4589ff;
+  --cds-support-info-inverse: #0043ce;
+  --cds-support-success: #42be65;
+  --cds-support-success-inverse: #24a148;
+  --cds-support-warning: #f1c21b;
+  --cds-support-warning-inverse: #f1c21b;
+  --cds-syntax-angle-bracket: #8d8d8d;
+  --cds-syntax-annotation: #08bdba;
+  --cds-syntax-arithmetic-operator: #e0e0e0;
+  --cds-syntax-atom: #f4f4f4;
+  --cds-syntax-attribute: #33b1ff;
+  --cds-syntax-attribute-name: #33b1ff;
+  --cds-syntax-attribute-value: #f4f4f4;
+  --cds-syntax-bitwise-operator: #e0e0e0;
+  --cds-syntax-block-comment: #42be65;
+  --cds-syntax-bool: #f4f4f4;
+  --cds-syntax-brace: #e0e0e0;
+  --cds-syntax-bracket: #e0e0e0;
+  --cds-syntax-character: #f4f4f4;
+  --cds-syntax-class-name: #3ddbd9;
+  --cds-syntax-color: #f4f4f4;
+  --cds-syntax-comment: #42be65;
+  --cds-syntax-compare-operator: #e0e0e0;
+  --cds-syntax-constant: #4589ff;
+  --cds-syntax-content: #f4f4f4;
+  --cds-syntax-content-separator: #e0e0e0;
+  --cds-syntax-control-keyword: #be95ff;
+  --cds-syntax-control-operator: #be95ff;
+  --cds-syntax-definition: #33b1ff;
+  --cds-syntax-definition-keyword: #33b1ff;
+  --cds-syntax-definition-operator: #33b1ff;
+  --cds-syntax-deleted: #a2191f;
+  --cds-syntax-deref-operator: #e0e0e0;
+  --cds-syntax-doc-comment: #42be65;
+  --cds-syntax-doc-string: #f4f4f4;
+  --cds-syntax-document-meta: #42be65;
+  --cds-syntax-emphasis: #f4f4f4;
+  --cds-syntax-escape: #e0e0e0;
+  --cds-syntax-float: #6fdc8c;
+  --cds-syntax-function: #f1c21b;
+  --cds-syntax-heading: #33b1ff;
+  --cds-syntax-heading-1: #33b1ff;
+  --cds-syntax-heading-2: #33b1ff;
+  --cds-syntax-heading-3: #33b1ff;
+  --cds-syntax-heading-4: #33b1ff;
+  --cds-syntax-heading-5: #33b1ff;
+  --cds-syntax-heading-6: #33b1ff;
+  --cds-syntax-inserted: #198038;
+  --cds-syntax-integer: #6fdc8c;
+  --cds-syntax-invalid: #fa4d56;
+  --cds-syntax-keyword: #4589ff;
+  --cds-syntax-label-name: #a6c8ff;
+  --cds-syntax-line-comment: #42be65;
+  --cds-syntax-link: #4589ff;
+  --cds-syntax-list: #f4f4f4;
+  --cds-syntax-literal: #f4f4f4;
+  --cds-syntax-local: #a6c8ff;
+  --cds-syntax-logic-operator: #e0e0e0;
+  --cds-syntax-macro-name: #f4f4f4;
+  --cds-syntax-meta: #42be65;
+  --cds-syntax-modifier: #4589ff;
+  --cds-syntax-module-keyword: #be95ff;
+  --cds-syntax-monospace: #f4f4f4;
+  --cds-syntax-name: #a6c8ff;
+  --cds-syntax-namespace: #3ddbd9;
+  --cds-syntax-null: #f4f4f4;
+  --cds-syntax-number: #6fdc8c;
+  --cds-syntax-operator: #e0e0e0;
+  --cds-syntax-operator-keyword: #4589ff;
+  --cds-syntax-paren: #e0e0e0;
+  --cds-syntax-processing-instruction: #f4f4f4;
+  --cds-syntax-property-name: #33b1ff;
+  --cds-syntax-punctuation: #e0e0e0;
+  --cds-syntax-quote: #42be65;
+  --cds-syntax-regexp: #be95ff;
+  --cds-syntax-self: #3ddbd9;
+  --cds-syntax-separator: #e0e0e0;
+  --cds-syntax-special: #4589ff;
+  --cds-syntax-special-string: #be95ff;
+  --cds-syntax-square-bracket: #e0e0e0;
+  --cds-syntax-standard: #4589ff;
+  --cds-syntax-strikethrough: #f4f4f4;
+  --cds-syntax-string: #f4f4f4;
+  --cds-syntax-strong: #f4f4f4;
+  --cds-syntax-tag: #3ddbd9;
+  --cds-syntax-tag-name: #3ddbd9;
+  --cds-syntax-type: #3ddbd9;
+  --cds-syntax-type-name: #3ddbd9;
+  --cds-syntax-type-operator: #3ddbd9;
+  --cds-syntax-unit: #6fdc8c;
+  --cds-syntax-update-operator: #e0e0e0;
+  --cds-syntax-url: #e0e0e0;
+  --cds-syntax-variable: #a6c8ff;
+  --cds-syntax-variable-name: #a6c8ff;
+  --cds-tag-background-blue: #0043ce;
+  --cds-tag-background-cool-gray: #4d5358;
+  --cds-tag-background-cyan: #00539a;
+  --cds-tag-background-gray: #525252;
+  --cds-tag-background-green: #0e6027;
+  --cds-tag-background-magenta: #9f1853;
+  --cds-tag-background-purple: #6929c4;
+  --cds-tag-background-red: #a2191f;
+  --cds-tag-background-teal: #005d5d;
+  --cds-tag-background-warm-gray: #565151;
+  --cds-tag-border-blue: #4589ff;
+  --cds-tag-border-cool-gray: #878d96;
+  --cds-tag-border-cyan: #1192e8;
+  --cds-tag-border-gray: #8d8d8d;
+  --cds-tag-border-green: #24a148;
+  --cds-tag-border-magenta: #ee5396;
+  --cds-tag-border-purple: #a56eff;
+  --cds-tag-border-red: #fa4d56;
+  --cds-tag-border-teal: #009d9a;
+  --cds-tag-border-warm-gray: #8f8b8b;
+  --cds-tag-color-blue: #d0e2ff;
+  --cds-tag-color-cool-gray: #f2f4f8;
+  --cds-tag-color-cyan: #bae6ff;
+  --cds-tag-color-gray: #f4f4f4;
+  --cds-tag-color-green: #a7f0ba;
+  --cds-tag-color-magenta: #ffd6e8;
+  --cds-tag-color-purple: #e8daff;
+  --cds-tag-color-red: #ffd7d9;
+  --cds-tag-color-teal: #9ef0f0;
+  --cds-tag-color-warm-gray: #f7f3f2;
+  --cds-tag-hover-blue: #0053ff;
+  --cds-tag-hover-cool-gray: #5d646a;
+  --cds-tag-hover-cyan: #0066bd;
+  --cds-tag-hover-gray: #636363;
+  --cds-tag-hover-green: #11742f;
+  --cds-tag-hover-magenta: #bf1d63;
+  --cds-tag-hover-purple: #7c3dd6;
+  --cds-tag-hover-red: #c21e25;
+  --cds-tag-hover-teal: #007070;
+  --cds-tag-hover-warm-gray: #696363;
+  --cds-text-disabled: hsla(0,0%,95.7%,.25);
+  --cds-text-error: #ff8389;
+  --cds-text-helper: #a8a8a8;
+  --cds-text-inverse: #161616;
+  --cds-text-on-color: #fff;
+  --cds-text-on-color-disabled: hsla(0,0%,100%,.25);
+  --cds-text-placeholder: hsla(0,0%,95.7%,.4);
+  --cds-text-primary: #f4f4f4;
+  --cds-text-secondary: #c6c6c6;
+  --cds-toggle-off: #6f6f6f;
+}
+
+/* ---------------------------------------------------------------------------
+ * Application layer. Carbon has no semantic token for "a bounding box drawn
+ * over a whiteboard photo" or "low model confidence", so those are defined
+ * here in terms of Carbon tokens and switched by the same rules above.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* Type. Plex is vendored; the stacks below are the offline fallbacks. */
+  --a2c-font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --a2c-font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, "Liberation Mono", monospace;
+
+  /* Carbon type set, the sizes an application chrome actually uses. */
+  --a2c-type-caption: 0.75rem;   /* 12px - labels, metadata, table cells   */
+  --a2c-type-body-sm: 0.875rem;  /* 14px - the app's default body size     */
+  --a2c-type-body: 1rem;         /* 16px - long prose only                 */
+  --a2c-type-heading-sm: 1rem;
+  --a2c-type-heading: 1.25rem;
+  --a2c-type-heading-lg: 1.75rem;
+  --a2c-type-display: clamp(1.75rem, 1.2rem + 1.6vw, 2.625rem);
+
+  --a2c-lh-tight: 1.25;
+  --a2c-lh-body: 1.5;
+  --a2c-lh-prose: 1.6;
+
+  /* Weights. Light for display and numbers, regular for body, semibold for
+     the few places that must not be missed. Nothing is ever bolder than 600. */
+  --a2c-weight-light: 300;
+  --a2c-weight-regular: 400;
+  --a2c-weight-label: 500;
+  --a2c-weight-strong: 600;
+
+  --a2c-label-tracking: 0.02em;
+
+  /* Carbon spacing scale, 01..09. */
+  --a2c-space-01: 0.125rem;
+  --a2c-space-02: 0.25rem;
+  --a2c-space-03: 0.5rem;
+  --a2c-space-04: 0.75rem;
+  --a2c-space-05: 1rem;
+  --a2c-space-06: 1.5rem;
+  --a2c-space-07: 2rem;
+  --a2c-space-08: 2.5rem;
+  --a2c-space-09: 3rem;
+
+  /* Carbon is square. These stay small on purpose; 2px reads as "software",
+     12px reads as "consumer app". */
+  --a2c-radius: 2px;
+  --a2c-radius-lg: 4px;
+
+  /* Carbon motion, productive. Anything slower feels broken in a tool that
+     streams subprocess output. */
+  --a2c-ease-productive: cubic-bezier(0.2, 0, 0.38, 0.9);
+  --a2c-ease-entrance: cubic-bezier(0, 0, 0.38, 0.9);
+  --a2c-ease-exit: cubic-bezier(0.2, 0, 1, 0.9);
+  --a2c-dur-fast: 70ms;
+  --a2c-dur: 110ms;
+  --a2c-dur-slow: 240ms;
+
+  /* Status as TEXT.
+     Carbon's --cds-support-* are icon and fill colours. Used as text they fail
+     WCAG AA on a light layer: success 3.35:1, warning 1.68:1, caution 2.46:1.
+     These four are the text-safe equivalents, above 5:1 in both themes.
+     Rule: --cds-support-* colours shapes, --a2c-text-* colours words. */
+  --a2c-text-success: var(--cds-tag-color-green);
+  --a2c-text-info: var(--cds-link-primary);
+  --a2c-text-caution: var(--a2c-amber);
+  --a2c-text-danger: var(--cds-text-error);
+
+  /* Model confidence, as a graphical mark (box strokes, legend swatches).
+     Deliberately NOT the error token at the low end: low confidence is not a
+     failure, and colouring it red teaches people to distrust a working run. */
+  --a2c-confidence-high: var(--cds-support-success);
+  --a2c-confidence-medium: var(--a2c-amber);
+  --a2c-confidence-low: var(--cds-text-secondary);
+  --a2c-confidence-unknown: var(--cds-text-placeholder);
+
+  /* The same scale as text. High is the only one that has to change: green at
+     3.35:1 is fine for a 2px stroke and not fine for a 12px label. */
+  --a2c-confidence-high-text: var(--a2c-text-success);
+  --a2c-confidence-medium-text: var(--a2c-amber);
+  --a2c-confidence-low-text: var(--cds-text-secondary);
+  --a2c-confidence-unknown-text: var(--cds-text-helper);
+
+  /* Bounding-box overlay over a user-supplied image. The image underneath is
+     arbitrary, so boxes carry their own contrast and never rely on the page
+     background. */
+  --a2c-overlay-scrim: rgba(0, 0, 0, 0.34);
+  --a2c-overlay-halo: rgba(0, 0, 0, 0.55);
+  --a2c-overlay-stroke: 2px;
+
+  --a2c-shadow-raised: 0 2px 6px var(--cds-shadow);
+  --a2c-shadow-overlay: 0 12px 32px var(--cds-shadow);
+
+  /* Layout. */
+  --a2c-header-height: 3rem;
+  --a2c-sidebar-width: 20rem;
+  --a2c-content-max: 96rem;
+  --a2c-prose-max: 68ch;
+}
