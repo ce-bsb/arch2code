@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ibm.com/arch2code/air.schema.json",
+  "title": "AIR — Architecture Intermediate Representation",
+  "description": "Technical contract between the architecture drawing and the generated code. Every observed element carries confidence and evidence traceable back to the source artifact (bbox in the image or cell id in the drawio). Whatever was not observed goes to assumptions[] or unknowns[] — never to components[]/connections[].",
+  "type": "object",
+  "required": ["air_version", "meta", "components", "connections", "unknowns", "assumptions", "experiment_plan"],
+  "additionalProperties": false,
+
+  "properties": {
+    "air_version": { "const": "1.0" },
+
+    "meta": {
+      "type": "object",
+      "required": ["run_id", "source_artifact", "source_kind", "extracted_at", "extractor", "overall_confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "run_id": { "type": "string", "pattern": "^[0-9]{8}-[0-9]{4}-[a-z0-9-]+$" },
+        "source_artifact": { "type": "string", "description": "Relative path of the original artifact" },
+        "source_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "source_kind": { "enum": ["napkin", "whiteboard", "screenshot", "drawio", "plantuml", "mermaid", "pdf", "prose"] },
+        "extraction_path": { "enum": ["deterministic", "vision"], "description": "deterministic = parsed XML/text; vision = multimodal LLM" },
+        "extracted_at": { "type": "string", "format": "date-time" },
+        "extractor": { "type": "string", "description": "Identifier of the model/parser used, e.g.: watsonx:meta-llama/llama-3-2-90b-vision-instruct or parse_drawio.py@1.0" },
+        "overall_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "human_reviewed_by": { "type": ["string", "null"] },
+        "title": { "type": "string" },
+        "output_language": {
+          "type": "string",
+          "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+          "default": "en",
+          "description": "BCP-47-ish language for generated prose (agent instructions, descriptions, README). Code, identifiers and comments are ALWAYS English. Default 'en'; set 'pt-BR' when the client reads the agent's answers."
+        },
+        "target_profile": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "default": null,
+          "description": "id of the platform profile under .bob/skills/scaffold-from-air/profiles/ this AIR is being generated for. null = not yet chosen; the human picks it at the gate. It is recorded here so the build is reproducible: the same AIR against a different profile is a different system."
+        }
+      }
+    },
+
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind", "confidence", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "name": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": ["service", "ui", "gateway", "database", "cache", "queue", "topic", "job", "function", "storage", "external", "actor", "agent", "tool", "knowledge_base", "unknown"],
+            "description": "agent/tool/knowledge_base are the agentic vocabulary: 'agent' is an LLM-driven decision maker with instructions, 'tool' is a deterministic callable it invokes, 'knowledge_base' is a retrieval corpus. Use them only when the drawing really shows an agentic system — a plain REST service is 'service', not 'agent'."
+          },
+          "tech": { "type": ["string", "null"], "description": "null when the drawing does not specify it. Do not guess — use assumptions[]." },
+          "responsibilities": { "type": "array", "items": { "type": "string" } },
+          "tools": {
+            "type": "array",
+            "description": "Tools this component (normally kind=agent) is drawn as owning. Inline, not a separate components[] entry, because a tool has no independent life: it exists only as a capability of its agent. Every entry still carries its own evidence when it was read off the drawing.",
+            "items": {
+              "type": "object",
+              "required": ["id", "name"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+                "name": { "type": "string", "minLength": 1 },
+                "kind": { "enum": ["tool"], "default": "tool" },
+                "tech": { "type": ["string", "null"], "description": "System the tool talks to (ServiceNow, SAP, an internal API). null when the drawing does not say." },
+                "note": { "type": ["string", "null"] },
+                "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+                "evidence": { "$ref": "#/$defs/evidence" }
+              }
+            }
+          },
+          "boundary": { "type": ["string", "null"] },
+          "note": { "type": ["string", "null"], "description": "Free-text observation about the element. Never a substitute for responsibilities[] or assumptions[]." },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "evidence": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+
+    "connections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "from", "to", "protocol", "sync", "confidence", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "from": { "type": "string", "description": "source components[].id" },
+          "to": { "type": "string", "description": "target components[].id" },
+          "protocol": {
+            "enum": ["http", "https", "grpc", "graphql", "amqp", "kafka", "mqtt", "jdbc", "sql", "s3", "file", "websocket", "internal", "external_chat", "unknown"],
+            "description": "'internal' = in-platform hand-off with no wire protocol of its own (agent -> collaborator agent, agent -> knowledge base). 'external_chat' = a conversational hand-off to an agent outside the platform. Both were invented independently by two real pipeline runs before being written down here; anything that IS an HTTP call stays 'http'/'https'."
+          },
+          "sync": { "enum": ["sync", "async", "unknown"] },
+          "label": { "type": ["string", "null"], "description": "Label read on the edge, literal" },
+          "note": { "type": ["string", "null"], "description": "Free-text observation about the edge." },
+          "payload": { "type": ["string", "null"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "evidence": { "$ref": "#/$defs/evidence" },
+          "verified_by_second_pass": { "type": "boolean", "default": false, "description": "true once arch_vision_verify_element has confirmed it. Mandatory for confidence < 0.85 on a hand-drawn artifact." }
+        }
+      }
+    },
+
+    "boundaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "name": { "type": "string" },
+          "kind": {
+            "enum": ["vpc", "namespace", "cluster", "zone", "onprem", "cloud", "dmz", "account", "logical", "external_system"],
+            "description": "'external_system' is the box drawn around things the team does not own (ServiceNow, a partner API). It is what tells a profile that everything inside is integration surface, never something to generate."
+          },
+          "contains": { "type": "array", "items": { "type": "string" } },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+
+    "nonfunctional": {
+      "type": "array",
+      "description": "ONLY requirements written in the artifact or stated by the human. Never inferred.",
+      "items": {
+        "type": "object",
+        "required": ["kind", "text", "confidence", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "enum": ["sla", "latency", "throughput", "availability", "security", "compliance", "cost", "retention"] },
+          "text": { "type": "string" },
+          "applies_to": { "type": "array", "items": { "type": "string" } },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "source": { "enum": ["artifact", "human"] }
+        }
+      }
+    },
+
+    "unknowns": {
+      "type": "array",
+      "description": "Gaps. Each one becomes a question for the human. blocking=true stops stage 4.",
+      "items": {
+        "type": "object",
+        "required": ["id", "question", "blocking"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "about": { "type": ["string", "null"], "description": "id of the affected component/connection" },
+          "question": { "type": "string", "minLength": 10 },
+          "options": { "type": "array", "items": { "type": "string" }, "description": "Concrete alternatives. A closed question unblocks faster than an open one." },
+          "blocking": { "type": "boolean" },
+          "answer": { "type": ["string", "null"], "default": null }
+        }
+      }
+    },
+
+    "assumptions": {
+      "type": "array",
+      "description": "Everything that did not come from the drawing but made it into the AIR. With no declared impact, it is a hidden assumption.",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "made_by", "impact"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "text": { "type": "string" },
+          "made_by": { "enum": ["model", "human"] },
+          "rationale": { "type": "string" },
+          "alternatives": { "type": "array", "items": { "type": "string" } },
+          "impact": { "type": "string", "minLength": 10, "description": "What breaks in the code if this assumption is wrong" },
+          "confirmed": { "type": "boolean", "default": false }
+        }
+      }
+    },
+
+    "experiment_plan": {
+      "type": "object",
+      "required": ["hypotheses", "stack", "out_of_scope"],
+      "additionalProperties": false,
+      "properties": {
+        "goal": { "type": "string" },
+        "hypotheses": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Falsifiable. If no test can refute it, it is not a hypothesis.",
+          "items": {
+            "type": "object",
+            "required": ["id", "statement", "falsifiable_by"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^h[0-9]+$" },
+              "statement": { "type": "string", "minLength": 10 },
+              "falsifiable_by": { "type": "string", "description": "How this test can FAIL" },
+              "relates_to": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "stack": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "E.g.: {\"runtime\":\"python3.11\",\"api\":\"fastapi\",\"broker\":\"kafka\",\"orchestration\":\"docker-compose\"}"
+        },
+        "out_of_scope": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Write it aggressively. A prototype that tries everything validates nothing."
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "required": ["kind", "value"],
+      "additionalProperties": false,
+      "description": "The trail back to the origin. It is what lets you answer 'where did this come from?' in an architecture review.",
+      "properties": {
+        "kind": { "enum": ["bbox", "cell", "line", "text", "human"] },
+        "value": {
+          "oneOf": [
+            { "type": "string", "description": "mxCell cell id, line, or literal excerpt" },
+            { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4, "description": "bbox [x, y, w, h] normalized 0..1" }
+          ]
+        },
+        "label_text": { "type": ["string", "null"], "description": "Text read on the element, literal, with no correction" }
+      }
+    }
+  }
+}

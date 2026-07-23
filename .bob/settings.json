@@ -1,0 +1,20 @@
+{
+  "general": {
+    "retryFetchErrors": true
+  },
+  "_comment": [
+    "Bob workspace settings. Bob reads this from the .bob/ of its CWD, the same",
+    "directory it resolves --chat-mode from.",
+    "",
+    "retryFetchErrors defaults to FALSE in bobshell 1.0.6. Turning it on is what",
+    "made stage 5 survivable: run 20260722-2126 died with Bob's own",
+    "  {\"status\":\"error\",\"error\":{\"type\":\"Error\",\"message\":\"terminated\"}}",
+    "839 ms after a successful local file read, with duration_ms 0 and",
+    "budget_spend at 21.79 of 100. 'terminated' is undici's error for an HTTP",
+    "response body closed mid-stream -- the connection from the container to the",
+    "model provider dropped, and Bob had no retry enabled to absorb it.",
+    "",
+    "With this on: 3 attempts, 5s initial backoff, 30s max. Costs nothing when",
+    "the network is healthy."
+  ]
+}

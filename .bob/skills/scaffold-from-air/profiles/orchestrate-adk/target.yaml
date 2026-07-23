@@ -1,0 +1,453 @@
+# =============================================================================
+# orchestrate-adk — IBM watsonx Orchestrate, ADK native agents
+# =============================================================================
+# This profile exists because the first generation of arch2code ADK templates was
+# WRONG in a way nobody caught: they emitted apiVersion / metadata / spec, the
+# Kubernetes shape, because the generator had no declared contract and reached for
+# the most familiar YAML it knew. Everything under schema_facts below was read out
+# of the installed package, not out of a blog post.
+#
+#   $ pip show ibm-watsonx-orchestrate   ->   2.12.0
+#   $ python -c "from ibm_watsonx_orchestrate.agent_builder.agents.types \
+#                import AgentSpec; print(list(AgentSpec.model_fields))"
+#
+# Re-run scripts/validate_adk.py after every ADK upgrade. A profile that claims
+# [VER] against a version that is no longer installed is just an [NV] with
+# better handwriting.
+# =============================================================================
+
+id: orchestrate-adk
+name: "IBM watsonx Orchestrate — ADK native agents"
+version: 1
+extends: null
+status: verified
+
+summary: >
+  Generates watsonx Orchestrate native agents, Python tools and knowledge bases
+  from an agentic drawing. The platform hosts the agents; it does not host your
+  infrastructure, so databases, queues and object storage are refused and pushed
+  behind a tool instead of being invented.
+
+provenance:
+  - "[VER] ibm-watsonx-orchestrate 2.12.0 installed on this machine. AgentSpec, KnowledgeBaseSpec, AgentStyle, AgentKind, SpecVersion and ConnectionType were read by introspection, not transcribed from documentation."
+  - "[VER] AgentSpec.model_validate() accepts the flat spec_version/kind/name/description/llm/style/instructions/collaborators/tools/knowledge_base document and rejects `kind: Agent` with a pydantic enum error."
+  - "[VER] ConnectionType members are API_KEY_AUTH, BASIC_AUTH, BEARER_TOKEN, KEY_VALUE and the OAUTH2_* family. There is no API_KEY member and no @expect_credentials decorator anywhere in the package."
+  - "[VER] The llm identifier format `watsonx/<provider>/<model>` appears throughout the installed package: developer_edition/resources/docker/default.env, compose-lite.yml, flow_builder/types.py, utils/environment.py."
+  - "[NV] `orchestrate agents import` has no --dry-run flag in 2.12.0, so no round trip against a real tenant was performed. Offline validation is pydantic-level only."
+
+# -----------------------------------------------------------------------------
+capabilities:
+
+  component_kinds:
+    supports: [agent, tool, knowledge_base, service, function, external, actor]
+    excludes:
+      - feature: database
+        reason: "watsonx Orchestrate runs agents, not databases. There is nowhere in an agent spec to put a schema, a connection pool or a migration."
+        workaround: "Draw the database behind a service and let that service become a tool: the agent calls an HTTP endpoint that owns the data."
+      - feature: cache
+        reason: "Caching is an implementation detail of whatever sits behind your tools; the platform gives an agent no cache to configure."
+        workaround: "Drop it from the drawing, or put it inside the service that becomes the tool."
+      - feature: queue
+        reason: "The ADK tool contract is request/response. A queue implies a producer that does not wait, which an agent turn cannot express."
+        workaround: "Model the queue's consumer as a service with an HTTP trigger, and let the agent call that."
+      - feature: topic
+        reason: "Publish/subscribe has no representation in an agent spec — nothing in the platform subscribes on your behalf."
+        workaround: "Same as queue: expose an endpoint that publishes, and give the agent a tool that calls it."
+      - feature: storage
+        reason: "Object storage is not an Orchestrate resource. Agents read documents through a knowledge base, not through a bucket."
+        workaround: "If the bucket holds documents the agent should search, redraw it as kind: knowledge_base. If it holds data, put a service in front of it."
+      - feature: ui
+        reason: "The chat surface belongs to the platform (webchat, Teams, Slack, phone). Generating a UI here would produce a second front end nobody deploys."
+        workaround: "Delete the UI box, or mark it as kind: actor — it is the human, and the platform already provides their window."
+      - feature: gateway
+        reason: "Routing between agents is what the supervisor agent's instructions do. A separate gateway would compete with the model for the same decision."
+        workaround: "Redraw the gateway as kind: agent with routing instructions and the downstream agents as collaborators."
+      - feature: job
+        reason: "The ADK agent spec has no batch or cron artifact this profile is willing to generate. There is an is_schedulable field, but nothing in the installed package documents its contract, and guessing it is exactly the failure this profile was written to stop."
+        workaround: "Expose the batch as a tool and trigger it from a scheduler you already own, or generate the batch itself with the container-microservice profile."
+
+  protocols:
+    supports: [internal, external_chat, http, https]
+    excludes:
+      - feature: kafka
+        reason: "An agent cannot hold a consumer group open between turns; there is no place in the spec for a broker connection."
+        workaround: "Put a service on the topic and give the agent an HTTP tool that reads what that service already consumed."
+      - feature: amqp
+        reason: "Same as kafka: no message-broker client in an agent turn."
+        workaround: "Wrap the broker in a service and call it over HTTP."
+      - feature: mqtt
+        reason: "Device telemetry has no agent-side representation."
+        workaround: "Land the telemetry in a service, then read it over HTTP."
+      - feature: jdbc
+        reason: "Agents do not hold database connections, and a tool that opens one leaks credentials into the tool sandbox."
+        workaround: "Put the query behind an HTTP endpoint and pass parameters to it."
+      - feature: sql
+        reason: "Same as jdbc. A generated tool that builds SQL from model output is also a prompt-injection path straight into your data."
+        workaround: "Expose named, parameterised operations as HTTP endpoints; the agent picks the operation, never the SQL."
+      - feature: s3
+        reason: "Object storage access is not part of the tool contract."
+        workaround: "Serve the object through an HTTP endpoint, or index it in a knowledge base."
+      - feature: grpc
+        reason: "Python tools can technically import a gRPC stub, but the platform packages tools from source without your .proto or generated stubs."
+        workaround: "Front the gRPC service with an HTTP endpoint."
+      - feature: graphql
+        reason: "No native GraphQL tool kind; a hand-rolled client would put query construction in model output."
+        workaround: "Expose the specific queries you need as REST endpoints and import them as an OpenAPI tool."
+      - feature: websocket
+        reason: "An agent turn is request/response — there is no turn long enough to hold a socket."
+        workaround: "Poll over HTTP, or move the streaming consumer into a service."
+      - feature: file
+        reason: "Tools run in the platform's sandbox with no shared filesystem with your systems, so a path that works on your laptop is empty in production."
+        workaround: "Pass the content as a tool argument, fetch it over HTTP, or load it into a knowledge base."
+
+  sync_modes:
+    supports: [sync]
+    excludes:
+      - feature: async
+        reason: "The ADK tool contract is request/response: the agent waits for the tool's return value inside the turn. There is no callback the platform will deliver later."
+        workaround: "Split it in two: one tool that starts the work and returns a ticket, another that the user can ask about later."
+
+  boundary_kinds:
+    supports: [logical, external_system]
+    excludes:
+      - feature: vpc
+        reason: "Network topology is not modelled anywhere in an agent spec."
+        workaround: "Keep it in the architecture document; the connection to a private system is a connection with credentials, and that is what gets generated."
+      - feature: namespace
+        reason: "There is no namespace object in Orchestrate. The closest concept is a workspace, and mapping one onto the other silently would be a guess."
+        workaround: "Treat it as kind: logical, or set the workspace by hand after import."
+      - feature: cluster
+        reason: "You do not place agents on clusters; the platform does."
+      - feature: zone
+        reason: "Availability zones are the platform's problem, not the spec's."
+      - feature: onprem
+        reason: "On-prem placement of an agent is not expressible. What IS expressible is a tool that calls an on-prem endpoint."
+        workaround: "Draw the on-prem system as kind: external inside an external_system boundary."
+      - feature: cloud
+        reason: "Same as onprem — placement is not part of the agent contract."
+      - feature: dmz
+        reason: "Network zoning has no representation in an agent spec."
+      - feature: account
+        reason: "Tenancy is chosen at import time by the active environment, not by the generated file."
+        workaround: "`orchestrate env activate <env>` before importing."
+
+  nonfunctional_honored: [security]
+
+# -----------------------------------------------------------------------------
+# kind -> artifact. schema_facts is the contract the template may rely on;
+# must_not is the list of ways this exact artifact has already been got wrong.
+artifacts:
+
+  - for_kind: agent
+    path: "agents/{id}.yaml"
+    format: yaml
+    template: templates/agent.native.yaml
+    evidence: "[VER] ibm_watsonx_orchestrate.agent_builder.agents.types.AgentSpec, ADK 2.12.0"
+    schema_facts:
+      - "The document is FLAT. Every field is a top-level key. There is no metadata: block and no spec: block."
+      - "spec_version: v1 — the only member of SpecVersion."
+      - "kind: native — AgentKind is native | external | assistant. Default is native; write it anyway so the file is self-describing."
+      - "name and description are the only required fields; description is what other agents read when deciding to route here, so it is functional text, not decoration."
+      - "llm is a plain string in the form <provider>/<path>. ARCHITECTURAL DEFAULT for every generated agent: `groq/openai/gpt-oss-120b`. Do NOT use legacy watsonx granite ids (e.g. watsonx/ibm/granite-*) as the default; write groq/openai/gpt-oss-120b unless the AIR names a different model per agent. Omitting llm makes the ADK call the tenant for a default, which fails offline — always write it."
+      - "style is one of default | react | planner | custom | experimental_customer_care | react_intrinsic. Use PLANNER for an orchestrator/supervisor that decomposes a request and routes to collaborators; react for a specialist that calls tools; default for one that only answers."
+      - "plugins wires pre/post-LLM hooks: `plugins: {agent_pre_invoke: <fn>, agent_post_invoke: <fn>}`, each naming a plugins/*.py function. This is where a 'plugin pre'/'plugin post' box in the drawing goes."
+      - "SME-verified optional fields also present in AgentSpec 2.12.0: structured_output, toolkits, chat_with_docs, llm_config, hide_reasoning. Emit only what the drawing supports."
+      - "DIAGRAM MAPPING (the SME corrections): a box named/typed as a native agent is kind:agent even when the extractor labelled it kind:service — classify it as an agent, do NOT emit it as a tool stub; a 'plugin pre'/'plugin post' box -> plugins/ hook; an 'LLM' box inside an agent -> that agent's llm/llm_config (and a model_policy if multiple models), not a separate component; a 'guardrails/PII' box -> native HAPFilteringConfig for HAP plus a pre-invoke plugin calling governance/openscale_monitor.py; an 'LLM-Judge' box -> the evaluation_model in evaluations/config.yaml, not a runtime service; a 'redaction' box -> a post-invoke plugin; a supervisor with specialists -> style: planner + collaborators."
+      - "instructions is a free-text block; it is the agent's behaviour and the single highest-value field in the file."
+      - "collaborators is a flat list of other agent names. An agent may not list itself: validate_agent_fields raises BadRequest on a circular reference."
+      - "tools is a flat list of tool names (the Python function names, not file paths)."
+      - "knowledge_base is a flat list of knowledge base names."
+      - "Optional and safe to emit: display_name, hidden, context_variables, guidelines (list of {display_name, condition, action, tool})."
+    must_not:
+      - "Never emit apiVersion:, metadata: or spec:. That is the Kubernetes shape and the ADK rejects it — kind: Agent is not a member of AgentKind."
+      - "Never write `provider: wx.ai` as a sibling of llm inside a spec block. AgentProvider exists, but native agents carry the provider inside the llm string."
+      - "Never use kind: Agent, kind: KnowledgeBase or any CamelCase kind. The values are lowercase snake."
+      - "Never invent config: enable_cot / config: hidden. hidden is a top-level boolean; there is no config block and no enable_cot field."
+      - "Never list an agent as its own collaborator."
+
+  - for_kind: tool
+    path: "tools/{id}.py"
+    format: python
+    template: templates/tool.py
+    evidence: "[VER] ibm_watsonx_orchestrate.agent_builder.tools.tool signature and ConnectionType members, ADK 2.12.0"
+    schema_facts:
+      - "from ibm_watsonx_orchestrate.agent_builder.tools import tool, ToolPermission"
+      - "from ibm_watsonx_orchestrate.agent_builder.connections import ConnectionType"
+      - "@tool accepts: name, description, input_schema, output_schema, permission, expected_credentials, display_name, kind, enable_dynamic_input_schema, enable_dynamic_output_schema, dynamic_input_schema, dynamic_output_schema, response_format."
+      - "expected_credentials is a list of {app_id: str, type: ConnectionType}. Both fields are required."
+      - "ConnectionType.API_KEY_AUTH, BASIC_AUTH, BEARER_TOKEN, KEY_VALUE, OAUTH2_AUTH_CODE, OAUTH2_CLIENT_CREDS, OAUTH2_DIRECT_ACCESS, OAUTH2_PASSWORD, OAUTH2_TOKEN_EXCHANGE, OAUTH_ON_BEHALF_OF_FLOW."
+      - "permission takes a ToolPermission member; READ_ONLY is the default and the right one for anything that does not change state."
+      - "The docstring and the type hints ARE the tool's schema: the model picks this tool by reading them. Every argument gets a type hint, and the docstring gets an Args: section."
+      - "Credentials are fetched at call time from the connection named by app_id — never from a literal in the file."
+    must_not:
+      - "ConnectionType.API_KEY does not exist. It is API_KEY_AUTH. This one typo makes the tool fail to import with an AttributeError."
+      - "@expect_credentials does not exist in any version present here. Credentials go in the expected_credentials argument of @tool."
+      - "Never hardcode a key, token or password. Never read one from a literal default in os.getenv(\"X\", \"sk-...\")."
+      - "Never return a bare dict with no type hint on the function — an untyped return gives the platform no output schema."
+      - "Never leave a `pass` body. Unimplemented tools raise NotImplementedError with the AIR id and what is missing."
+
+  - for_kind: knowledge_base
+    path: "knowledge_bases/{id}.yaml"
+    format: yaml
+    template: templates/knowledge_base.yaml
+    evidence: "[VER] ibm_watsonx_orchestrate.agent_builder.agents.types.KnowledgeBaseSpec + knowledge_bases.types.KnowledgeBaseBuiltInVectorIndexConfig, ADK 2.12.0"
+    schema_facts:
+      - "spec_version: v1, kind: knowledge_base (the only member of KnowledgeBaseKind)."
+      - "name is required; description is optional but is what the agent reads to decide whether to search here."
+      - "documents is a list of file paths relative to the YAML, or a list of {path, url} objects."
+      - "vector_index is the built-in index configuration: embeddings_model_name, chunk_size, chunk_overlap, limit, extraction_strategy."
+      - "conversational_search_tool is the alternative for an index you already own elsewhere (Milvus, Elasticsearch, OpenSearch, AstraDB, custom)."
+    must_not:
+      - "There is no storage: block and no provider: watsonx_orchestrate key. The built-in index is configured under vector_index."
+      - "There is no top-level chunking: block. chunk_size and chunk_overlap live inside vector_index."
+      - "Never ship a knowledge base with an empty documents list and a commented-out example. An empty KB answers every question with silence, and the demo blames the agent."
+
+  - for_kind: service
+    path: "tools/{id}.py"
+    format: python
+    template: templates/tool.py
+    evidence: "[INF] Mapping decision, not a platform fact: a plain service in an agentic drawing is something the agent calls, and the only thing an agent can call is a tool."
+    schema_facts:
+      - "CLASSIFY FIRST. The vision extractor labels native agents and plugin boxes as kind:service. Before treating a service as a tool, check its name/role: a supervisor/specialist agent is an AGENT (agents/{id}.yaml); a 'plugin pre'/'plugin post' box is a PLUGIN (plugins/{id}.py). Only a service that is neither becomes a tool."
+      - "A genuine service becomes one Python tool per operation the drawing names, not one tool per service. The model chooses tools by name and docstring, so `create_order` and `cancel_order` beat one `order_api(action)`."
+      - "The service's responsibilities[] become the tool docstrings; connections[] out of it become the calls inside the tool body."
+    must_not:
+      - "Never emit an agent or a plugin box as a tool just because the extractor typed it kind:service. That is exactly how an agentic drawing degrades into generic microservices — the mistake this whole profile exists to prevent."
+      - "Never generate the backing service itself here. This profile writes the agent side of the boundary; the service is somebody else's deployment."
+
+  - for_kind: function
+    path: "tools/{id}.py"
+    format: python
+    template: templates/tool.py
+    evidence: "[INF] Same mapping rationale as service: a function in the drawing is a single callable, which is exactly a tool."
+
+  - for_kind: external
+    path: "tools/{id}_client.py"
+    format: python
+    template: templates/tool.py
+    evidence: "[DOC] The ADK imports OpenAPI tools with `orchestrate tools import -k openapi -f <spec>`; the Python client below is the fallback for when no spec exists."
+    schema_facts:
+      - "If the external system has an OpenAPI document, DO NOT generate Python: emit the spec path and let `orchestrate tools import -k openapi` build the tool. It gets the schema right by construction."
+      - "Without a spec, generate one Python tool per operation with expected_credentials pointing at a connection named after the system."
+    must_not:
+      - "Never invent the external system's endpoints, paths or payload shapes. Unknown endpoint means an unknowns[] entry and a NotImplementedError, not a plausible URL."
+
+  # --- SME layer: plugins, connections, multi-LLM, AgentOps, governance ----- #
+
+  - for_kind: project
+    path: "plugins/{plugin_id}.py"
+    format: python
+    template: templates/plugin.py
+    evidence: "[DOC] AgentSpec.plugins.agent_pre_invoke / agent_post_invoke, ADK 2.12.0. The diagram's 'plugin pre'/'plugin post' boxes are hooks, not tools. One plugins/<name>.py per plugin box."
+    schema_facts:
+      - "A 'plugin pre'/'plugin post' box drawn around an agent's LLM is an AgentSpec plugin hook (agent_pre_invoke / agent_post_invoke), wired under the agent's `plugins:` block by function name — NOT a tool and NOT a collaborator."
+      - "Pre-invoke runs before the model and may validate, enrich or BLOCK the turn (guardrails, PII). Post-invoke runs after the model and may redact or reshape the output (redaction, an LLM-Judge check)."
+    must_not:
+      - "Never emit a plugin box as a tools/{id}.py @tool or as a service — that drops the hook and the guardrail never runs. This is the single most common ADK mapping mistake for an agentic drawing."
+      - "Never fake a guardrail that always passes. A governance hook that cannot be wired raises NotImplementedError naming the AIR id and the missing endpoint."
+
+  - for_kind: project
+    path: "connections/{app_id}.yaml"
+    format: yaml
+    template: templates/connection.yaml
+    evidence: "[DOC] ConnectionConfiguration; `orchestrate connections import` runs before the tools that name the app_id. One connections/<app_id>.yaml per external app_id a tool authenticates to."
+    schema_facts:
+      - "One connection per external app_id a tool authenticates to. It declares app_id, auth_type, security_scheme and server_url — never the secret, which is set per environment with `orchestrate connections set-credentials`."
+      - "Imported BEFORE tools: a tool whose expected_credentials app_id has no connection fails to import."
+
+  - for_kind: project
+    path: "model_policies/{policy}.yaml"
+    format: yaml
+    template: templates/model_policy.yaml
+    evidence: "[DOC] ModelPolicy is the native multi-LLM router — this IS the 'API Gateway for multiple LLMs'."
+    schema_facts:
+      - "A ModelPolicy routes (loadbalance) or fails over (fallback) across several models, so an agent is not pinned to one endpoint. Emit one when the drawing shows a gateway in front of the models, or more than one LLM, or a primary+backup."
+      - "The first target is the architectural default groq/openai/gpt-oss-120b. Non-watsonx targets are registered first with `orchestrate models add --provider <p>` (models/external_providers.md)."
+    must_not:
+      - "Never model an LLM router as a separate gateway component/edge. In ADK it is a ModelPolicy referenced from the agent, not a box the agent calls."
+
+  - for_kind: project
+    path: "models/external_providers.md"
+    format: markdown
+    evidence: "[DOC] `orchestrate models add --provider openai|anthropic|azure-ai|bedrock|cohere|...` registers a non-watsonx LLM a policy can target."
+    schema_facts:
+      - "Any model_name in a model_policy that is not a watsonx id must be registered first. List the exact `orchestrate models add` commands, one per external provider the policy targets."
+
+  - for_kind: project
+    path: "evaluations/config.yaml"
+    format: yaml
+    template: templates/evaluation_config.yaml
+    evidence: "[INF] ADK AgentOps: `orchestrate evaluations generate|evaluate|red_teaming`, TestConfig introspected from ADK 2.12.0."
+    schema_facts:
+      - "AgentOps turns experiment_plan hypotheses into runnable tests: one story per hypothesis under evaluations/stories/, expanded by `evaluations generate` into test_cases/, scored by `evaluations evaluate`."
+      - "An 'LLM-Judge' box is NOT a runtime service: it is the evaluation_model plus a referenceless metric here. A guardrail hypothesis (PII/jailbreak) becomes an attacks/*.yaml run with `evaluations red_teaming`."
+    must_not:
+      - "Never generate an LLM-Judge as a tools/*.py or a separate agent. It is an evaluation-time construct."
+
+  - for_kind: project
+    path: "evaluations/ragas/evaluate_rag.py"
+    format: python
+    template: templates/ragas_evaluate.py
+    evidence: "[DOC] RAGAS scores retrieval quality (faithfulness, relevancy, context precision/recall) that the ADK evaluation does not."
+    schema_facts:
+      - "Emit ONLY when the drawing has a knowledge base or a retrieval step. Without RAG it is noise."
+
+  - for_kind: project
+    path: "governance/openscale_monitor.py"
+    format: python
+    template: templates/openscale_monitor.py
+    evidence: "[INF] watsonx.governance / OpenScale placeholder — payload logging and quality/drift/PII monitors. Placeholder by design; the AIR keeps the endpoint out of scope."
+    schema_facts:
+      - "Emit when the drawing shows governance / guardrails / PII / monitoring. It is a loud NotImplementedError stub reading its endpoint from the environment, never an invented API shape."
+    must_not:
+      - "Never generate a plausible-looking governance call with a guessed endpoint or a hardcoded key. A visible gap beats a silent fake."
+
+  - for_kind: project
+    path: "observability/tracing.env"
+    format: text
+    template: templates/tracing.env
+    evidence: "[DOC] `orchestrate observability traces` — langfuse/OTel exporter. langfuse_enabled ties evaluation traces to live monitoring."
+    schema_facts:
+      - "Env var NAMES only, never values. Langfuse or OTel; langfuse ties the evaluation runs to production traces so a red-teaming failure and an incident land in the same place."
+
+  - for_kind: project
+    path: "requirements.txt"
+    format: text
+    evidence: "[VER] The tools import `ibm-watsonx-orchestrate`; anything else the tool bodies import has to be listed or the tool fails to package."
+    schema_facts:
+      - "List only what is actually imported: ibm-watsonx-orchestrate always; ragas + datasets only when evaluations/ragas exists; langfuse only when observability uses it. A dependency the offline gate cannot run must be flagged, not silently assumed present."
+
+  - for_kind: project
+    path: "README.md"
+    format: markdown
+    evidence: "[DOC] `orchestrate env activate <env>` then the imports; order matters."
+    schema_facts:
+      - "State the FULL import order the SME layer needs: env activate -> connections -> models (external providers) -> model_policies -> tools (openapi + python) -> knowledge_bases -> agents -> evaluations evaluate. An agent that references a policy, tool or connection the tenant does not have yet fails to import."
+
+# -----------------------------------------------------------------------------
+parameters:
+  - title: "Model and behaviour"
+    required: [llm]
+    properties:
+      llm:
+        type: string
+        default: "groq/openai/gpt-oss-120b"
+        description: "Model id in <provider>/<path> form. ARCHITECTURAL DEFAULT: groq/openai/gpt-oss-120b, applied to every generated agent unless the AIR names one per agent. Do not fall back to legacy watsonx granite ids."
+      style:
+        type: string
+        enum: [default, react, planner]
+        default: react
+        description: "react for agents that call tools; default for agents that only answer."
+  - title: "Connections"
+    advanced: true
+    properties:
+      default_connection_type:
+        type: string
+        enum: [api_key_auth, basic_auth, bearer_token, key_value, oauth2_client_creds]
+        default: api_key_auth
+        description: "ConnectionType used in expected_credentials when the drawing does not say how a system authenticates."
+  - title: "Knowledge bases"
+    advanced: true
+    properties:
+      embeddings_model_name:
+        type: string
+        default: "watsonx/ibm/slate-125m-english-rtrvr-v2"
+      chunk_size:
+        type: integer
+        default: 512
+      chunk_overlap:
+        type: integer
+        default: 64
+  - title: "AgentOps and governance"
+    advanced: true
+    properties:
+      evaluation_model:
+        type: string
+        default: "groq/openai/gpt-oss-120b"
+        description: "The LLM-Judge that scores the agent during evaluation."
+      similarity_threshold:
+        type: number
+        default: 0.7
+        description: "Below this an evaluation test case fails."
+      model_policy_strategy:
+        type: string
+        enum: [fallback, loadbalance]
+        default: fallback
+        description: "How a model_policy routes across models: fallback (primary+backup) or loadbalance (parallel equivalents)."
+      langfuse_enabled:
+        type: boolean
+        default: false
+        description: "Tie evaluation traces to live observability."
+
+inference_rules:
+  - {param: llm, from: "experiment_plan.stack.llm", when_absent: default, default: "groq/openai/gpt-oss-120b"}
+  - {param: evaluation_model, from: "experiment_plan.stack.evaluation_model", when_absent: default, default: "groq/openai/gpt-oss-120b"}
+  - {param: output_language, from: "meta.output_language", when_absent: default, default: "en"}
+  - param: entry_agent
+    from: "meta.entry_agent"
+    when_absent: ask
+    question: "Which agent is the entry point the user talks to?"
+    blocking: true
+
+questions:
+  - id: q_entry_agent
+    param: entry_agent
+    when: {has_component_kind: agent}
+    question: "Which agent does the user talk to first? Everything else becomes a collaborator of that one."
+    blocking: true
+    why: "Orchestrate routes from one entry agent. Pick the wrong one and every conversation starts in the wrong place, which looks like a model problem and is a topology problem."
+  - id: q_connection_app_ids
+    param: connection_app_ids
+    when: {has_component_kind: external}
+    question: "For each external system, what is the app_id of its connection in your tenant, and how does it authenticate?"
+    options: ["api_key_auth", "basic_auth", "bearer_token", "oauth2_client_creds", "not decided yet"]
+    blocking: false
+    why: "app_id is a name that has to already exist in the tenant. A guessed one imports cleanly and fails on the first real call, at demo time."
+  - id: q_kb_documents
+    param: kb_documents
+    when: {has_component_kind: knowledge_base}
+    question: "Which documents go into each knowledge base, and where are they now?"
+    blocking: true
+    why: "A knowledge base with no documents imports successfully and answers nothing. The failure is silent and always gets blamed on the model."
+  - id: q_output_language
+    param: output_language
+    when: {air_missing: "meta.output_language"}
+    question: "What language should the agent SPEAK to end users? (Code, identifiers and comments stay in English.)"
+    options: ["en", "pt-BR", "es", "fr"]
+    blocking: false
+    why: "Instructions written in the wrong language make the agent answer your Brazilian users in English, and that is discovered in front of them."
+
+phases:
+  analyze: inherit
+  plan: inherit
+  scaffold: override
+  validate: decorate
+
+bob_modes:
+  scaffold: {slug: arch-scaffold, approval_mode: yolo, cwd: "{project_root}"}
+  validate: {slug: arch-validator, approval_mode: auto_edit, cwd: "{project_root}"}
+
+templates: templates/
+
+validate:
+  level: full
+  level_reason: "The installed ADK validates agent and knowledge base specs with pydantic, offline, with no tenant. That is a real compiler-grade check on the exact class of error this profile exists to prevent."
+  checks:
+    - name: adk-spec
+      cmd: "python3 {skill_root}/scripts/validate_adk.py ."
+      requires: [{python_module: ibm_watsonx_orchestrate}]
+      confidence: "[VER] Runs AgentSpec.model_validate / KnowledgeBaseSpec.model_validate against every generated YAML."
+      degrade: "Without the ADK installed, generated agent YAML is checked for well-formedness only — a wrong-but-well-formed spec (the Kubernetes shape) would pass. Install it with `pip install ibm-watsonx-orchestrate`."
+      blocking: true
+    - name: py-syntax
+      cmd: "python3 -m py_compile {files:tools/*.py}"
+      requires: [{binary: python3}]
+      confidence: "[VER] py_compile is stdlib and catches every syntax error in the generated tools."
+      degrade: "No Python interpreter: tool files are not parsed at all."
+      blocking: true
+    - name: ruff
+      cmd: "ruff check tools/"
+      requires: [{binary: ruff}]
+      confidence: "[VER] ruff is installed on this machine."
+      degrade: "Skipping lint: unused imports and undefined names in tools are not caught until the platform packages them. `pip install ruff`."
+      blocking: false

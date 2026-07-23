@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "arch_vision": {
+      "command": "python3",
+      "args": ["mcp/arch_vision/server.py"],
+      "alwaysAllow": [
+        "arch_vision_list_intake",
+        "arch_vision_describe_diagram",
+        "arch_vision_extract_architecture",
+        "arch_vision_verify_element"
+      ],
+      "disabled": false
+    }
+  }
+}

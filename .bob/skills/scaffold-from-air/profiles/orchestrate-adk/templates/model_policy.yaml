@@ -1,0 +1,34 @@
+# arch2code: generated from AIR {{run_id}} :: {{component_id}}
+# source: {{source_artifact}}  evidence: {{evidence}}
+# DO NOT EDIT BY HAND — regenerate via the arch-scaffold mode
+#
+# ADK ModelPolicy — THIS is the "API Gateway for multiple LLMs". A policy routes
+# or fails over across several models (watsonx + external providers) so an agent
+# is not pinned to one endpoint. Import with `orchestrate model_policies import`
+# BEFORE the agents that reference it. Register any non-watsonx target first with
+# `orchestrate models add --provider <p>` (see models/external_providers.md).
+#
+# Contract: ibm_watsonx_orchestrate ModelPolicy (ADK 2.12.0). [DOC]
+
+spec_version: v1
+name: "{{policy_name}}"
+
+policy:
+  # strategy: loadbalance spreads traffic by weight; fallback tries targets in
+  # order until one succeeds. Use fallback when a primary + backup are drawn,
+  # loadbalance when the drawing shows parallel equivalent models.
+  strategy: "{{strategy}}"          # loadbalance | fallback
+
+  retry:
+    attempts: {{retry_attempts}}    # e.g. 2
+    on_status_codes: [429, 500, 502, 503, 504]
+
+  targets:
+    # Ordered for fallback; weighted for loadbalance. The FIRST target is the
+    # architectural default model unless the AIR says otherwise.
+    - model_name: "groq/openai/gpt-oss-120b"
+      weight: 1
+    # Add the backup / secondary models the drawing names (register each with
+    # `orchestrate models add` first). Example:
+    # - model_name: "watsonx/meta-llama/llama-3-3-70b-instruct"
+    #   weight: 1

@@ -1,0 +1,309 @@
+# =============================================================================
+# mainframe-cobol — z/OS batch (QSAM/VSAM/Db2) and CICS online
+# =============================================================================
+# The honest profile. Nothing on a developer laptop can prove that generated COBOL
+# assembles on the client's LPAR, and there is no open-source EXEC CICS translator
+# to lean on. So this target ships at validation level structural-only by default
+# and says so in the UI. Promising a compile we cannot run is how a generator loses
+# a mainframe team's trust on day one — and you only get one of those days.
+# =============================================================================
+
+id: mainframe-cobol
+name: "IBM z/OS — COBOL batch and CICS online"
+version: 1
+extends: null
+status: documented
+
+summary: >
+  Generates COBOL programs with the four divisions in strict order, the JCL that
+  compiles and runs them, and BMS mapsets for CICS transactions. Refuses anything
+  that assumes a network stack the mainframe does not present to an application
+  program, and pushes asynchronous flows onto IBM MQ instead of inventing one.
+
+provenance:
+  - "[DOC] cobc man page: -fsyntax-only is \"syntax error checking only; don't emit any output\"; -std accepts ibm, ibm-strict, mvs, mvs-strict."
+  - "[DOC] COBOL division order (IDENTIFICATION, ENVIRONMENT, DATA, PROCEDURE) and the CICS pseudo-conversational pattern (SEND MAP / RECEIVE MAP / RETURN TRANSID COMMAREA)."
+  - "[DOC] IGYWCL / IGYWCLG for batch compile-link and compile-link-go; DFHYITVL / DFHZITCL for the CICS translate-compile-link procedures."
+  - "[NV] cobc is NOT installed on this machine. Not one line of generated COBOL in this repo has been through a compiler."
+  - "[NV] GnuCOBOL has EXEC SQL preprocessing but no EXEC CICS translator. The 'stub the EXEC CICS blocks before cobc' idea is a proposal, not established practice, and is not implemented here."
+
+# -----------------------------------------------------------------------------
+capabilities:
+
+  component_kinds:
+    supports: [job, service, database, queue, external, actor, ui]
+    excludes:
+      - feature: cache
+        reason: "There is no cache tier for an application program to configure. In-memory tables live in WORKING-STORAGE and die with the run unit; a coupling facility structure is a systems programmer's decision, not a generated one."
+        workaround: "Drop it, or make the caching explicit as a VSAM file the batch reads."
+      - feature: function
+        reason: "A serverless function has no z/OS equivalent that this profile will guess at. A subprogram is a CALL, not a component."
+        workaround: "Fold it into the program that calls it, or draw it as kind: job if it is a standalone step."
+      - feature: storage
+        reason: "Object storage is not something an application program addresses. Datasets are, and they are already covered by kind: database with protocol file."
+        workaround: "Redraw as a database with a file connection, and name the DDNAME."
+      - feature: topic
+        reason: "Publish/subscribe generation for MQ pub/sub is out of this profile's declared scope."
+        workaround: "Model it as a queue and answer the MQ question."
+      - feature: gateway
+        reason: "API-gateway behaviour on z/OS is z/OS Connect configuration, not a COBOL program. Generating a COBOL 'gateway' would produce something with no deployment target."
+        workaround: "Draw the program the gateway fronts, and configure z/OS Connect separately."
+      - feature: agent
+        reason: "No LLM agent runtime is being assumed on the mainframe."
+        workaround: "Put the agent off-platform with the orchestrate-adk or langgraph profile and let it call a z/OS Connect API."
+      - feature: tool
+        reason: "Same as agent — agentic vocabulary has no artifact here."
+      - feature: knowledge_base
+        reason: "Same as agent — no retrieval corpus artifact on this target."
+
+  protocols:
+    supports: [file, sql, jdbc, internal]
+    excludes:
+      - feature: grpc
+        reason: "No gRPC stack an application program can call."
+        workaround: "Front it with z/OS Connect and call it over HTTP from off-platform, or exchange the data as a file."
+      - feature: graphql
+        reason: "No GraphQL client for a COBOL program."
+      - feature: websocket
+        reason: "There is no socket a pseudo-conversational transaction can hold; the transaction ends at RETURN."
+      - feature: s3
+        reason: "Object storage is not addressable from an application program in this profile's scope."
+        workaround: "Exchange a dataset, or move the transfer to a distributed component."
+      - feature: mqtt
+        reason: "Device telemetry has no mainframe-side representation here."
+      - feature: kafka
+        reason: "Kafka clients on z/OS exist, but generating one means picking a product and a copybook set the drawing never named."
+        workaround: "Bridge to IBM MQ, which this profile does generate once you answer the MQ question."
+      - feature: amqp
+        reason: "Same as kafka: the mainframe messaging answer is IBM MQ, and the product must be stated, not assumed."
+        workaround: "Declare the edge as a queue component and pick IBM MQ."
+      - feature: http
+        reason: "HTTP from COBOL means z/OS Connect, CICS web support or WEB API calls — three different generated shapes. This profile refuses to pick one for you."
+        workaround: "Answer the integration question this profile asks, or expose the program through z/OS Connect and generate the caller elsewhere."
+      - feature: https
+        reason: "Same as http, plus AT-TLS or SSL configuration that is not an application artifact."
+      - feature: external_chat
+        reason: "No conversational runtime on this target."
+
+  sync_modes:
+    supports: [sync, async]
+    excludes: []
+    # Async is supported, but never silently: on z/OS it means IBM MQ, and the
+    # q_async_transport question below is blocking. An async edge with no queue
+    # manager named is a design decision disguised as code generation.
+
+  boundary_kinds:
+    supports: [onprem, logical, external_system]
+    excludes:
+      - feature: vpc
+        reason: "Not a mainframe concept at the application level."
+      - feature: namespace
+        reason: "Not a mainframe concept; the closest thing is a subsystem id, and mapping them silently would be a guess."
+      - feature: cluster
+        reason: "A sysplex is not a cluster you declare in a program."
+      - feature: zone
+        reason: "Not expressible in an application artifact."
+      - feature: cloud
+        reason: "This target is on-premises by definition."
+      - feature: dmz
+        reason: "Network zoning is not an application artifact."
+      - feature: account
+        reason: "RACF and SAF classes are security administration, not generated code."
+
+  nonfunctional_honored: [retention]
+
+# -----------------------------------------------------------------------------
+artifacts:
+
+  - for_kind: job
+    path: "cobol/{id}.cbl"
+    format: cobol
+    evidence: "[DOC] COBOL language reference: four divisions, strict order."
+    schema_facts:
+      - "The four divisions appear in this order and no other: IDENTIFICATION, ENVIRONMENT, DATA, PROCEDURE."
+      - "IDENTIFICATION DIVISION requires only PROGRAM-ID."
+      - "ENVIRONMENT DIVISION is the only machine-dependent division: INPUT-OUTPUT SECTION / FILE-CONTROL with SELECT ... ASSIGN TO <ddname>."
+      - "DATA DIVISION carries FILE SECTION (FD plus an 01 record per file), WORKING-STORAGE SECTION, and LINKAGE SECTION when the program is called."
+      - "PROCEDURE DIVISION uses OPEN / READ / WRITE / CLOSE, PERFORM UNTIL for the read loop, and ends with GOBACK."
+      - "Fixed format: area A starts at column 8, area B at column 12, and nothing goes past column 72."
+      - "Every DDNAME in a SELECT has to appear as a DD statement in the JCL. That pairing is the whole contract between the two files."
+    must_not:
+      - "Never emit the divisions out of order — a compiler error on line 1 of the ENVIRONMENT DIVISION is the least useful error a mainframe team can be handed."
+      - "Never write past column 72 in fixed format."
+      - "Never use STOP RUN in a called subprogram; GOBACK returns to the caller."
+
+  - for_kind: "service[boundary_kind=onprem]"
+    path: "cobol/{id}.cbl"
+    format: cobol
+    evidence: "[DOC] CICS application programming: pseudo-conversational SEND MAP / RECEIVE MAP / RETURN TRANSID COMMAREA."
+    schema_facts:
+      - "A CICS program declares 01 DFHCOMMAREA in the LINKAGE SECTION — that is how state survives between transactions."
+      - "EXEC CICS SEND MAP(...) MAPSET(...) FROM(...) END-EXEC and EXEC CICS RECEIVE MAP(...) INTO(...) RESP(...) END-EXEC."
+      - "The transaction ends with EXEC CICS RETURN TRANSID(...) COMMAREA(...) END-EXEC — pseudo-conversational, so the task does not sit waiting for the terminal."
+      - "Compiler options RENT and NODYNAM are mandatory for CICS."
+    must_not:
+      - "Never do QSAM I/O (OPEN/READ/WRITE/CLOSE on an FD) in a CICS program. File access goes through EXEC CICS READ/WRITE."
+      - "Never use STOP RUN in a CICS program."
+      - "Never generate a conversational loop that waits on the terminal. Pseudo-conversational is not a style preference; a conversational task holds resources for the duration of a human being's coffee break."
+
+  - for_kind: job
+    path: "jcl/{id}.jcl"
+    format: jcl
+    evidence: "[DOC] IGYWCL compiles and link-edits; IGYWCLG compiles, link-edits and runs."
+    schema_facts:
+      - "Step names are at most 8 characters; dataset names at most 44."
+      - "If the program uses COPY, the JCL MUST include //COBOL.SYSLIB pointing at the copybook library. COPY without SYSLIB produces JCL that fails at compile time, every time."
+      - "Every DDNAME referenced by a SELECT ... ASSIGN TO needs a matching DD statement in the run step."
+      - "Continuation is a non-blank in column 72 and the continued text starting in column 16."
+    must_not:
+      - "Never emit a COPY statement without also emitting the SYSLIB DD."
+      - "Never exceed 8 characters in a step name or 44 in a DSN; both fail at JCL interpretation, before anything useful happens."
+
+  - for_kind: "service[boundary_kind=onprem]"
+    path: "jcl/{id}-cics.jcl"
+    format: jcl
+    evidence: "[DOC] DFHYITVL is the separate-translator procedure; DFHZITCL uses the integrated translator."
+    schema_facts:
+      - "Use DFHYITVL when the EXEC CICS statements are translated separately, DFHZITCL when the compiler's integrated translator handles them."
+      - "The compile step needs RENT and NODYNAM."
+
+  - for_kind: "service[boundary_kind=onprem]"
+    path: "bms/{id}map.bms"
+    format: bms
+    evidence: "[DOC] BMS macro sequence for a mapset."
+    schema_facts:
+      - "DFHMSD TYPE=MAP,MODE=INOUT,LANG=COBOL2 opens the mapset; DFHMDI SIZE=(24,80) defines the map; DFHMDF POS=(row,col) defines each field; DFHMSD TYPE=FINAL closes it."
+      - "The generated symbolic map copybook is what the COBOL program COPYs — the two must agree on the mapset name."
+    must_not:
+      - "Never omit DFHMSD TYPE=FINAL. The assembly fails with a message that says nothing about the missing macro."
+
+  - for_kind: database
+    path: "copybooks/{id}.cpy"
+    format: cobol
+    evidence: "[DOC] Record layouts are shared through copybooks; VSAM through SELECT/FD, Db2 through EXEC SQL."
+    schema_facts:
+      - "A VSAM file becomes a SELECT ... ORGANIZATION IS INDEXED plus an FD and an 01 record layout in a copybook."
+      - "A Db2 table becomes EXEC SQL INCLUDE of the DCLGEN copybook plus EXEC SQL statements with host variables."
+    must_not:
+      - "Never invent PICTURE clauses for fields the drawing did not name. An unknown record layout is a blocking unknown — a wrong PIC is a data corruption that passes every test you generated."
+
+  - for_kind: queue
+    path: "mqsc/{id}.mqsc"
+    format: text
+    evidence: "[DOC] MQSC scripts are line oriented with a 72-column limit and a `+` continuation, which is mandatory for z/OS portability."
+    schema_facts:
+      - "DEFINE QLOCAL('...') REPLACE, one command per logical unit; comments start with an asterisk in column 1."
+      - "Nothing goes past column 72; a continued command ends with `+`."
+      - "The COBOL side uses the MQ CALL interface (MQCONN, MQOPEN, MQPUT/MQGET, MQCLOSE, MQDISC) with the CMQV/CMQODV copybooks."
+    must_not:
+      - "Never exceed 72 columns. The script parses on a distributed queue manager and truncates on z/OS — the worst kind of difference, because it works on your laptop."
+      - "Never invent queue names. An unanswered q_mq_manager is blocking for exactly this reason."
+
+  - for_kind: project
+    path: "README.md"
+    format: markdown
+    evidence: "[INF] The README states the validation level honestly, so nobody reads structural-only output as compiled output."
+
+# -----------------------------------------------------------------------------
+parameters:
+  - title: "Environment"
+    required: [cobol_dialect]
+    properties:
+      cobol_dialect: {type: string, enum: [ibm-strict, ibm, mvs-strict, mvs], default: ibm-strict}
+      source_format: {type: string, enum: [fixed, free], default: fixed}
+      online_manager: {type: string, enum: [none, cics], default: none}
+  - title: "Datasets"
+    advanced: true
+    properties:
+      hlq: {type: string, default: "USERHLQ", description: "High level qualifier for generated DSNs."}
+      copybook_library: {type: string, default: "USERHLQ.COPYLIB", description: "Goes into //COBOL.SYSLIB. Mandatory as soon as any program uses COPY."}
+
+inference_rules:
+  - {param: cobol_dialect, from: "experiment_plan.stack.cobol_dialect", when_absent: default, default: "ibm-strict"}
+  - {param: source_format, from: "experiment_plan.stack.source_format", when_absent: default, default: "fixed"}
+  - param: online_manager
+    from: "experiment_plan.stack.online_manager"
+    when_absent: ask
+    question: "Is this batch only, or is there a CICS online part? The two produce different programs and different JCL."
+    options: [none, cics]
+    blocking: true
+
+questions:
+  - id: q_online_manager
+    param: online_manager
+    when: {has_component_kind: service}
+    question: "Are these online CICS transactions or batch programs? A CICS program and a batch program share almost no structure."
+    options: ["batch only", "CICS online", "both"]
+    blocking: true
+    why: "Get this wrong and you generate QSAM I/O inside a CICS program, which compiles on a distributed COBOL and fails on the LPAR."
+  - id: q_ddnames
+    param: ddnames
+    when: {has_protocol: file}
+    question: "What is the DDNAME and dataset name for each file the drawing shows?"
+    blocking: true
+    why: "SELECT ... ASSIGN TO needs a real DDNAME, and the JCL needs the matching DD. Invented names produce a program and a JCL that disagree, and the failure surfaces at execution on the client's system."
+  - id: q_copybook_library
+    param: copybook_library
+    when: {always: true}
+    question: "Which library holds the copybooks? It goes into //COBOL.SYSLIB."
+    blocking: false
+    why: "A COPY statement with no SYSLIB DD is JCL that fails at compile time. This is the single most common generated-JCL defect."
+  - id: q_mq_manager
+    param: mq_manager
+    when: {has_component_kind: queue}
+    question: "Which queue manager and queue names should the MQ calls use?"
+    blocking: true
+    why: "MQOPEN against a guessed queue name is a 2085 at runtime, discovered on the client's system rather than on yours."
+  - id: q_async_transport
+    param: async_transport
+    when: {has_sync_mode: async}
+    question: "The drawing has an asynchronous edge. On z/OS that means IBM MQ — which queue manager, and is there a queue component missing from the drawing?"
+    options: ["IBM MQ, queue manager named below", "it is not really async, make it a synchronous CALL", "a dataset hand-off between two batch steps"]
+    blocking: true
+    why: "There is no generic async on z/OS. Left unanswered, a generator invents a polling loop over a dataset and calls it messaging."
+  - id: q_db2_or_vsam
+    param: data_store
+    when: {has_component_kind: database}
+    question: "Db2 or VSAM? EXEC SQL and SELECT/FD are different programs, not a switch."
+    options: [db2, vsam, "both"]
+    blocking: true
+    why: "The data access strategy determines the DATA DIVISION, the JCL steps and the bind requirement. It cannot be retrofitted."
+
+phases:
+  analyze: inherit
+  plan: inherit
+  scaffold: override
+  validate: override
+
+bob_modes:
+  scaffold: {slug: arch-scaffold, approval_mode: yolo, cwd: "{project_root}"}
+  validate: {slug: arch-validator, approval_mode: auto_edit, cwd: "{project_root}"}
+
+templates: null
+
+validate:
+  level: structural-only
+  level_reason: >
+    No COBOL compiler is installed on this machine and no LPAR is reachable, so
+    nothing here can prove the generated programs assemble. Even with GnuCOBOL
+    installed, cobc has no EXEC CICS translator, so CICS programs would still be
+    structural-only. The UI must show this level next to the download button.
+  checks:
+    - name: cobol-structure
+      cmd: "python3 {skill_root}/scripts/check_cobol_structure.py {files:cobol/*.cbl}"
+      requires: [{binary: python3}]
+      confidence: "[INF] A grammar written here: division order, division presence, the 72-column limit, GOBACK/STOP RUN placement, and COPY without a matching SYSLIB in the paired JCL. It is not a compiler."
+      degrade: "Not applicable — stdlib only."
+      blocking: true
+    - name: jcl-structure
+      cmd: "python3 {skill_root}/scripts/check_jcl_structure.py {files:jcl/*.jcl}"
+      requires: [{binary: python3}]
+      confidence: "[INF] A grammar written here: step name length, DSN length, //SYSIN and //SYSLIB presence, column-72 continuation. There is no open-source JCL linter to defer to."
+      degrade: "Not applicable — stdlib only."
+      blocking: true
+    - name: cobc-syntax
+      cmd: "cobc -fsyntax-only -std={cobol_dialect} -fixed -Wall {files:cobol/*.cbl}"
+      requires: [{binary: cobc}]
+      confidence: "[DOC] cobc man page: -fsyntax-only performs syntax checking only and emits no output."
+      degrade: "cobc is NOT installed on this machine, so the generated COBOL has never seen a compiler. Structure is checked, syntax is not. Install GnuCOBOL (`brew install gnu-cobol`) to upgrade this target's honesty."
+      blocking: false

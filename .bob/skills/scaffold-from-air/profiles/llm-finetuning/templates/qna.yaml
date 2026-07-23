@@ -1,0 +1,53 @@
+# arch2code: generated from AIR {{run_id}} :: {{component_id}}
+# source: {{source_artifact}}  evidence: {{evidence}}
+# DO NOT EDIT the shape by hand — regenerate via the arch-scaffold mode.
+#
+# InstructLab taxonomy leaf (qna.yaml), schema version 3.
+#   * KNOWLEDGE leaf: needs domain, document_outline, a grounding `document`,
+#     and >=5 seed_examples, each with question/answer AND a `context`.
+#   * SKILL leaf: seed_examples with question/answer; `context` only if grounded.
+# Path is the classification: this file lives at taxonomy/{{slug}}/qna.yaml.
+#
+# Every seed below is a PLACEHOLDER. InstructLab SDG amplifies these seeds into
+# hundreds of synthetic examples, so a wrong seed becomes a wrong dataset. Fill
+# them from the real source named in the AIR (see q_seed_data) before running
+# `ilab data generate`.
+version: 3
+created_by: "TODO-github-username"   # AIR {{component_id}}: real contributor handle
+
+# --- KNOWLEDGE fields (delete this block for a pure SKILL leaf) ---------------
+domain: "TODO-domain"                # e.g. finance, healthcare-billing
+document_outline: >
+  TODO AIR {{component_id}}: one or two sentences describing what this knowledge
+  leaf teaches. Do not invent facts here.
+document:
+  # The grounding source. Unknown repo/commit is a BLOCKING unknown — leave the
+  # TODO, do not invent a repo that may not exist.
+  repo: "TODO-https://github.com/<org>/<knowledge-docs>"
+  commit: "TODO-commit-sha"
+  patterns:
+    - "TODO-*.md"
+
+seed_examples:
+  # KNOWLEDGE: >=5 entries, each context under ~500 tokens, drawn from `document`.
+  - context: >
+      TODO AIR {{component_id}}: the grounding passage this Q/A pair is taken
+      from. For a SKILL leaf, remove `context`.
+    question: "TODO: a question a user would actually ask."
+    answer: "TODO: the answer, grounded in the context above."
+  - context: >
+      TODO: second grounding passage.
+    question: "TODO: second question."
+    answer: "TODO: second answer."
+  - context: >
+      TODO: third grounding passage.
+    question: "TODO: third question."
+    answer: "TODO: third answer."
+  - context: >
+      TODO: fourth grounding passage.
+    question: "TODO: fourth question."
+    answer: "TODO: fourth answer."
+  - context: >
+      TODO: fifth grounding passage (knowledge needs at least five).
+    question: "TODO: fifth question."
+    answer: "TODO: fifth answer."

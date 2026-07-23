@@ -1,0 +1,70 @@
+# arch2code: generated from AIR {{run_id}} :: {{component_id}}
+# source: {{source_artifact}}  evidence: {{evidence}}
+# DO NOT EDIT BY HAND — regenerate via the arch-scaffold mode
+#
+# Contract: ibm_watsonx_orchestrate.agent_builder.agents.types.AgentSpec (ADK 2.12.0).
+# Flat document. No apiVersion, no metadata:, no spec:. Placeholders are {{...}}.
+
+spec_version: v1
+kind: native
+
+name: "{{agent_name}}"                     # snake_case or kebab-case; referenced by collaborators of other agents
+description: >
+  {{agent_description}}
+  # Functional text: this is what a routing agent reads when deciding whether to
+  # hand off here. "Handles X for Y" beats "This agent is responsible for...".
+
+llm: "{{llm}}"                             # <provider>/<path>; architectural default: groq/openai/gpt-oss-120b
+style: "{{style}}"                         # planner for an orchestrator/supervisor that decomposes+routes; react for a tool-calling specialist; default for one that only answers
+
+instructions: |
+  {{instructions}}
+
+  # Derived from AIR components[].responsibilities[] and the outgoing connections[].
+  # What belongs here:
+  #   - the decision rule for each collaborator ("if the user asks about X, hand off to Y")
+  #   - when to call each tool, and what to do when it returns an error
+  #   - the refusal boundary: what this agent must NOT try to answer itself
+  #   - the language to answer in, when meta.output_language is not English
+  # What does not belong here: anything the drawing did not show. An invented
+  # policy in instructions reads exactly like a real one.
+
+tools:
+  # Flat list of Python tool FUNCTION names (not file paths, not module paths).
+  - "{{tool_name}}"
+
+collaborators:
+  # Other agents by name. An agent may not list itself — the ADK raises
+  # BadRequest: "Circular reference detected".
+  - "{{collaborator_agent_name}}"
+
+knowledge_base:
+  # Knowledge base names, matching the `name:` of each knowledge_bases/*.yaml.
+  - "{{knowledge_base_name}}"
+
+# PLUGINS — pre/post-LLM hooks. A "plugin pre" / "plugin post" box in the drawing
+# is THIS, not a tool and not a collaborator. Each name matches a plugins/*.py
+# function. Emit only the hooks the drawing shows.
+#   plugins:
+#     agent_pre_invoke: guardrails_pii_pre       # runs before the model (guardrails, PII)
+#     agent_post_invoke: price_redaction_post    # runs after the model (redaction, LLM-Judge)
+
+# LLM behaviour — when the drawing shows an 'LLM' box inside the agent, or a
+# multi-model policy, tune it here (all optional):
+#   llm_config:
+#     temperature: 0
+#     max_tokens: 2048
+#   model_policy: supervisor_policy               # -> model_policies/supervisor_policy.yaml (multi-LLM routing)
+
+# STRUCTURED OUTPUT — when the agent must return a fixed schema (e.g. a report):
+#   structured_output:
+#     schema_name: comparison_report
+
+# Optional, all top-level, all verified present in AgentSpec 2.12.0:
+#   display_name: "Human readable name"
+#   hidden: false
+#   context_variables: [tenant_id]
+#   guidelines:
+#     - display_name: "Escalate angry customers"
+#       condition: "the user is upset or asks for a human"
+#       action: "hand off to the escalation agent immediately"

@@ -1,0 +1,188 @@
+{
+  "air_version": "1.0",
+  "meta": {
+    "run_id": "20260721-1129-atendente",
+    "source_artifact": ".arch/intake/20260721-1129-atendente/arquitetura_agentes_adk_orchestrate.png",
+    "source_kind": "whiteboard",
+    "extraction_path": "vision",
+    "extracted_at": "2026-07-21T11:29:00-03:00",
+    "extractor": "watsonx:meta-llama/llama-3-2-90b-vision-instruct",
+    "overall_confidence": 0.86,
+    "human_reviewed_by": null,
+    "title": "Card servicing multi-agent (whiteboard photo)",
+    "output_language": "pt-BR",
+    "target_profile": "orchestrate-adk"
+  },
+
+  "components": [
+    {
+      "id": "supervisor_agent",
+      "name": "Card servicing supervisor",
+      "kind": "agent",
+      "tech": "watsonx Orchestrate",
+      "responsibilities": [
+        "First point of contact for the customer",
+        "Routes to the dispute, escalation or branch-locator agent by intent",
+        "Grounds card policy answers on the card rules knowledge base"
+      ],
+      "boundary": "wxo_boundary",
+      "confidence": 0.93,
+      "evidence": {"kind": "bbox", "value": [0.08, 0.12, 0.22, 0.16], "label_text": "Agente Atendente Supervisor"}
+    },
+    {
+      "id": "dispute_agent",
+      "name": "Dispute agent",
+      "kind": "agent",
+      "tech": "watsonx Orchestrate",
+      "responsibilities": ["Opens and tracks card transaction disputes"],
+      "boundary": "wxo_boundary",
+      "tools": [
+        {"id": "list_purchases", "name": "List purchases", "kind": "tool", "tech": null,
+         "note": "Lists the customer's card purchases", "confidence": 0.9,
+         "evidence": {"kind": "bbox", "value": [0.36, 0.30, 0.10, 0.05]}},
+        {"id": "open_dispute", "name": "Open dispute", "kind": "tool", "tech": "ServiceNow",
+         "note": "Opens a dispute incident in ServiceNow", "confidence": 0.88,
+         "evidence": {"kind": "bbox", "value": [0.36, 0.36, 0.10, 0.05]}}
+      ],
+      "confidence": 0.9,
+      "evidence": {"kind": "bbox", "value": [0.34, 0.24, 0.16, 0.20]}
+    },
+    {
+      "id": "card_rules_kb",
+      "name": "Card rules knowledge base",
+      "kind": "knowledge_base",
+      "tech": "watsonx Orchestrate Knowledge Base",
+      "responsibilities": ["Card fees, limits and dispute policy documents"],
+      "boundary": "wxo_boundary",
+      "confidence": 0.85,
+      "evidence": {"kind": "bbox", "value": [0.10, 0.52, 0.18, 0.10], "label_text": "Regras Cartoes RAG"}
+    },
+    {
+      "id": "servicenow",
+      "name": "ServiceNow incidents",
+      "kind": "external",
+      "tech": "ServiceNow",
+      "responsibilities": ["System of record for dispute incidents"],
+      "boundary": "servicenow_boundary",
+      "confidence": 0.92,
+      "evidence": {"kind": "bbox", "value": [0.72, 0.30, 0.20, 0.12]}
+    },
+    {
+      "id": "customer",
+      "name": "Card holder",
+      "kind": "actor",
+      "tech": null,
+      "responsibilities": ["Asks about purchases, disputes and card rules"],
+      "boundary": null,
+      "confidence": 0.95,
+      "evidence": {"kind": "bbox", "value": [0.02, 0.12, 0.05, 0.08]}
+    }
+  ],
+
+  "connections": [
+    {
+      "id": "customer_to_supervisor",
+      "from": "customer", "to": "supervisor_agent",
+      "protocol": "external_chat", "sync": "sync",
+      "label": "chat", "payload": null,
+      "confidence": 0.9,
+      "evidence": {"kind": "bbox", "value": [0.07, 0.15, 0.02, 0.01]},
+      "verified_by_second_pass": true
+    },
+    {
+      "id": "supervisor_to_dispute",
+      "from": "supervisor_agent", "to": "dispute_agent",
+      "protocol": "internal", "sync": "sync",
+      "label": "routes disputes", "payload": null,
+      "confidence": 0.91,
+      "evidence": {"kind": "bbox", "value": [0.30, 0.20, 0.04, 0.02]},
+      "verified_by_second_pass": true
+    },
+    {
+      "id": "supervisor_to_kb",
+      "from": "supervisor_agent", "to": "card_rules_kb",
+      "protocol": "internal", "sync": "sync",
+      "label": "RAG", "payload": null,
+      "confidence": 0.87,
+      "evidence": {"kind": "bbox", "value": [0.16, 0.44, 0.02, 0.06]},
+      "verified_by_second_pass": true
+    },
+    {
+      "id": "dispute_to_servicenow",
+      "from": "dispute_agent", "to": "servicenow",
+      "protocol": "https", "sync": "sync",
+      "label": "REST", "payload": "incident",
+      "confidence": 0.89,
+      "evidence": {"kind": "bbox", "value": [0.52, 0.32, 0.18, 0.02]},
+      "verified_by_second_pass": true
+    }
+  ],
+
+  "boundaries": [
+    {
+      "id": "wxo_boundary",
+      "name": "watsonx Orchestrate",
+      "kind": "logical",
+      "contains": ["supervisor_agent", "dispute_agent", "card_rules_kb"],
+      "confidence": 0.9
+    },
+    {
+      "id": "servicenow_boundary",
+      "name": "ServiceNow",
+      "kind": "external_system",
+      "contains": ["servicenow"],
+      "confidence": 0.9
+    }
+  ],
+
+  "nonfunctional": [
+    {
+      "kind": "compliance",
+      "text": "Dispute conversations are retained for audit for 5 years",
+      "applies_to": ["dispute_agent"],
+      "confidence": 0.7,
+      "source": "human"
+    }
+  ],
+
+  "unknowns": [
+    {
+      "id": "u_servicenow_instance",
+      "about": "servicenow",
+      "question": "Which ServiceNow instance and which connection app_id should the dispute tools use?",
+      "options": ["dev instance", "production instance"],
+      "blocking": true,
+      "answer": null
+    }
+  ],
+
+  "assumptions": [
+    {
+      "id": "a_wxo_platform",
+      "text": "The boxes labelled 'Agente' are watsonx Orchestrate native agents",
+      "made_by": "model",
+      "rationale": "The drawing is titled 'ADK Orchestrate' and the boxes carry tool lists",
+      "alternatives": ["LangGraph nodes", "plain HTTP services calling a model"],
+      "impact": "If they are not Orchestrate agents, every generated YAML is the wrong format and nothing imports",
+      "confirmed": false
+    }
+  ],
+
+  "experiment_plan": {
+    "goal": "Show that a whiteboard of an agentic system becomes importable Orchestrate artifacts",
+    "hypotheses": [
+      {
+        "id": "h1",
+        "statement": "The generated agent and knowledge base YAML validate against the installed ADK models with no hand edits",
+        "falsifiable_by": "validate_adk.py reports at least one ERROR on the generated directory",
+        "relates_to": ["supervisor_agent", "card_rules_kb"]
+      }
+    ],
+    "stack": {"platform": "watsonx-orchestrate", "llm": "watsonx/ibm/granite-3-3-8b-instruct"},
+    "out_of_scope": [
+      "Real ServiceNow connectivity",
+      "Voice and phone channels",
+      "Production knowledge base ingestion"
+    ]
+  }
+}

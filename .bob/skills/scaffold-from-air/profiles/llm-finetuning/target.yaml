@@ -1,0 +1,480 @@
+# =============================================================================
+# llm-finetuning — fine-tuning an LLM (InstructLab + generic LoRA/PEFT/SFT)
+# =============================================================================
+# This profile turns a "we are going to fine-tune a model" drawing into a
+# runnable-shaped project WITHOUT pretending the run happened. A fine-tuning
+# design has five moving parts and this profile maps each to an artifact:
+#
+#   taxonomy / data      -> InstructLab qna.yaml + a data-prep loader
+#   data generation      -> `ilab data generate` / a synthetic-data step
+#   training             -> train/config.yaml (hyperparameters) + train/train.py
+#   evaluation           -> eval/evaluate.py (metrics + delta vs. the base model)
+#   resulting model      -> model_card.md
+#
+# HONESTY CONTRACT. None of instructlab / transformers / peft / trl / datasets
+# is installed on the machine this was authored on (checked with
+# importlib.metadata — every one raised PackageNotFoundError). Training needs a
+# GPU and real data that no drawing carries. So:
+#   * status is `documented`, not `verified`;
+#   * validate.level is `structural-only` — py_compile + YAML/ruff only;
+#   * every place that needs a GPU, a real dataset, or a base-model download
+#     raises NotImplementedError naming the AIR id and the missing input. There
+#     is no fabricated training loop that "works" and silently trains on nothing.
+# =============================================================================
+
+id: llm-finetuning
+name: "LLM fine-tuning — InstructLab and generic LoRA/PEFT/SFT"
+version: 1
+extends: null
+status: documented
+
+summary: >
+  Generates a fine-tuning project from a training drawing: an InstructLab
+  taxonomy (qna.yaml) plus the ilab data-generate / train / evaluate flow, or a
+  generic Hugging Face path (SFT/LoRA hyperparameters in train/config.yaml, a
+  transformers+peft+trl train.py, an evaluation harness that scores the tuned
+  model against the base) and a model card. It refuses UIs, gateways, brokers and
+  agent runtimes: this target produces a model, not a serving stack.
+
+provenance:
+  - "[DOC] InstructLab taxonomy format: a leaf node carries a qna.yaml with top-level keys version (currently 3), created_by, domain, seed_examples (each with question/answer, and context for knowledge), and — for knowledge — document_outline / document with repo/commit/patterns. Source: github.com/instructlab/taxonomy CONTRIBUTING and the taxonomy schema."
+  - "[DOC] InstructLab CLI surface: `ilab config init`, `ilab data generate`, `ilab model train`, `ilab model evaluate`, `ilab taxonomy diff`. Config lives at ~/.config/instructlab/config.yaml. Source: docs.instructlab.ai and `ilab --help`."
+  - "[DOC] Hugging Face SFT path: trl.SFTTrainer + peft.LoraConfig(r, lora_alpha, lora_dropout, target_modules, task_type=CAUSAL_LM) + transformers.TrainingArguments. Source: huggingface.co/docs/trl and huggingface.co/docs/peft."
+  - "[INF] Kind mapping (taxonomy->knowledge_base, data prep->database/job, training->job/service, eval->function/service, model output->storage) is a design decision made here, not a platform fact. The vision extractor mislabels most of these as service/external; the schema_facts say how to reclassify each."
+  - "[NV] Nothing was fine-tuned. instructlab, transformers, peft, trl, datasets and accelerate are ALL absent on this machine (importlib.metadata PackageNotFoundError for each). No qna.yaml was linted by ilab; no train.py reached a GPU. Offline validation is py_compile / YAML / ruff only."
+
+# -----------------------------------------------------------------------------
+capabilities:
+
+  component_kinds:
+    supports: [knowledge_base, job, function, service, database, external, storage, actor]
+    excludes:
+      - feature: ui
+        reason: "A fine-tuning pipeline has no front end. There is nothing for a user to click; the outputs are a taxonomy, a config, scripts and a model card."
+        workaround: "Drop the UI box. If you need a chat surface to try the tuned model, take the model into the orchestrate-adk or container-microservice profile."
+      - feature: gateway
+        reason: "There is no request routing in a training run. A gateway implies live traffic this target never serves."
+        workaround: "Delete it here; put the gateway in the serving project that hosts the resulting model."
+      - feature: cache
+        reason: "No cache tier is an artifact of fine-tuning. HF's on-disk dataset/model cache is an environment path, not something this profile generates or configures."
+        workaround: "Drop it, or set HF_HOME in the training environment by hand."
+      - feature: queue
+        reason: "This profile emits scripts that run to completion, not a broker-driven pipeline. A queue implies an orchestrator that hands work off, which is out of scope."
+        workaround: "Wrap the generated train/eval steps in your own orchestrator (Airflow, Kubeflow, an RHOAI pipeline) — the scripts are the tasks it calls."
+      - feature: topic
+        reason: "Publish/subscribe has no representation in a batch training job."
+        workaround: "Same as queue — orchestrate the steps externally."
+      - feature: agent
+        reason: "An agent is a runtime that calls an LLM; this target BUILDS the LLM, it does not host one. Generating an agent here would be a serving project glued onto a training project."
+        workaround: "Fine-tune here, then point orchestrate-adk / langgraph / crewai at the resulting model as its llm."
+      - feature: tool
+        reason: "Agentic tool-calling is a serving concern, not a fine-tuning artifact. (A training box labelled 'tool' by the extractor is almost always a data-prep or eval step — reclassify it as function/job.)"
+        workaround: "Reclassify to function or job; put real agent tools in a serving profile."
+
+  protocols:
+    supports: [file, https, s3, internal]
+    excludes:
+      - feature: http
+        reason: "Model weights and datasets pulled over plain http are a supply-chain risk — a tampered checkpoint is a silent backdoor in every downstream turn."
+        workaround: "Use https for the Hugging Face Hub / watsonx / any model or data endpoint; the loaders here default to https."
+      - feature: sql
+        reason: "This profile does not generate a live SQL client inside a training step; a query built at train time couples the run to a database being up."
+        workaround: "Export the training rows to JSONL or Parquet first (the data-prep step does exactly this), then train from the file."
+      - feature: jdbc
+        reason: "Same as sql — no live JDBC connection is opened by a training script here."
+        workaround: "Snapshot the table to a file in the data-prep step and train from the file."
+      - feature: grpc
+        reason: "No gRPC client is part of a fine-tuning run in this profile's scope."
+        workaround: "Fetch the data over https or from a file before training."
+      - feature: graphql
+        reason: "No GraphQL client is generated for a training step."
+        workaround: "Materialise the query result to a file in data-prep."
+      - feature: kafka
+        reason: "A training job consumes a fixed dataset, not an open-ended stream; there is no consumer group a batch run can hold."
+        workaround: "Land the stream into a dataset file with a separate consumer, then fine-tune on the file."
+      - feature: amqp
+        reason: "Same as kafka — no broker client in a training run."
+        workaround: "Consume the queue elsewhere into a dataset file."
+      - feature: mqtt
+        reason: "Device telemetry has no training-side representation."
+        workaround: "Aggregate telemetry into a dataset file first."
+      - feature: websocket
+        reason: "A training run is a batch job; there is no socket to hold."
+        workaround: "Snapshot whatever the socket carries into a dataset file."
+      - feature: external_chat
+        reason: "There is no conversational surface in a fine-tuning project."
+        workaround: "That belongs to the serving project, not here."
+
+  sync_modes:
+    supports: [sync]
+    excludes:
+      - feature: async
+        reason: "A fine-tuning run is a long batch job that this profile generates as a script running to completion. There is no callback or queue this profile wires; 'async' training would be an orchestration layer that is deliberately out of scope."
+        workaround: "Run the generated steps under your own scheduler/orchestrator (Airflow, Kubeflow, RHOAI). The Makefile targets and pipeline steps are the tasks it invokes; long runs are the norm and are expected to be launched, not awaited in-band."
+
+  boundary_kinds:
+    supports: [logical, external_system]
+    excludes:
+      - feature: onprem
+        reason: "Where the GPUs sit is compute placement, not a generated artifact. This profile writes the training code; it does not write the infrastructure that schedules it."
+        workaround: "Record the compute location in the model card and README; provision the GPU host/cluster with an infra target, not this one."
+      - feature: cloud
+        reason: "Same as onprem — cloud placement of the training job is infrastructure, not a fine-tuning artifact."
+        workaround: "Note it in the model card; use an infra profile to stand up the training environment."
+      - feature: vpc
+        reason: "Network topology is not modelled by a training script."
+        workaround: "Keep it in the architecture document."
+      - feature: namespace
+        reason: "A Kubernetes/RHOAI namespace is a deployment target, not something a train.py declares."
+        workaround: "Set it when you deploy the job with an infra target."
+      - feature: cluster
+        reason: "You do not place a training run on a cluster from inside train.py; a scheduler does."
+        workaround: "Use container-microservice or an infra profile for the cluster manifests; this profile fills in the training container's command."
+      - feature: zone
+        reason: "Availability zones are an infrastructure concern, invisible to a training script."
+      - feature: dmz
+        reason: "Network zoning has no representation in a fine-tuning artifact."
+      - feature: account
+        reason: "The cloud/tenant account is chosen by whoever runs the job, not by the generated code."
+        workaround: "Select it in the environment before launching the run."
+
+  # Turned into documentation in the model card, not into infrastructure:
+  #   compliance -> the base-model licence + data-provenance / governance section
+  #   cost       -> the estimated GPU-hours / accelerator note
+  nonfunctional_honored: [compliance, cost]
+
+# -----------------------------------------------------------------------------
+# kind -> artifact. schema_facts is what a template may rely on; must_not is the
+# list of ways this exact artifact has already been (or is one search away from
+# being) got wrong.
+artifacts:
+
+  # --- taxonomy / seed data ------------------------------------------------- #
+  - for_kind: knowledge_base
+    path: "taxonomy/{slug}/qna.yaml"
+    format: yaml
+    template: templates/qna.yaml
+    evidence: "[DOC] github.com/instructlab/taxonomy CONTRIBUTING.md + taxonomy schema (version 3)."
+    schema_facts:
+      - "RECLASSIFY FIRST. A 'taxonomy', 'seed data', 'skills', 'knowledge' or 'training data' box the vision extractor labelled service/external/storage is an InstructLab taxonomy leaf: emit it here as qna.yaml, not as a service."
+      - "qna.yaml top-level keys: `version: 3`, `created_by:` (a GitHub username string), `seed_examples:` (a list). For KNOWLEDGE add `domain:` and `document_outline:` and a `document:` with {repo, commit, patterns}. For a SKILL, seed_examples alone is enough."
+      - "Each seed_examples entry has `question:` and `answer:`. A KNOWLEDGE entry additionally carries `context:` (the grounding passage the Q/A pair is drawn from); a grounded SKILL entry may carry `context:` too, an ungrounded skill has none."
+      - "Knowledge submissions need at least 5 seed_examples and each context under ~500 tokens; the file lives at a leaf of the taxonomy tree, e.g. `taxonomy/knowledge/<domain>/<subtopic>/qna.yaml`."
+      - "The directory path IS the taxonomy classification — `{slug}` becomes the knowledge/skills subtree. `ilab taxonomy diff` finds new leaves by walking these directories."
+    must_not:
+      - "Never emit `apiVersion`/`metadata`/`spec` — qna.yaml is a flat InstructLab document, not a Kubernetes object."
+      - "Never write `version: 1` or `version: 2`; the current taxonomy schema is version 3, and older versions are rejected by recent ilab."
+      - "Never invent seed Q/A pairs, `document.repo` URLs or `commit` hashes. Unknown grounding is a blocking unknown: leave a TODO naming the AIR id and the missing source, not a plausible repo that does not exist."
+      - "Never put a knowledge entry without its `context:` — an ungrounded 'knowledge' leaf is really a skill, and mislabelling it changes how SDG treats it."
+
+  # --- data-prep loader (a dataset that must become JSONL) ------------------- #
+  - for_kind: database
+    path: "data/prepare_{id}.py"
+    format: python
+    template: templates/data_prepare.py
+    evidence: "[INF] A dataset drawn as a database becomes a data-prep step that exports rows to a training file; this profile refuses to open a live SQL connection at train time (see protocols)."
+    schema_facts:
+      - "A `database` box that feeds training is a DATA-PREP step: read from the source, shape rows into the chat/instruction format, and write JSONL or Parquet under data/. It is NOT a live datasource the training loop queries."
+      - "The generic SFT path expects one JSON object per line with either a `messages` list (chat) or `prompt`/`completion` (instruction) fields; datasets.load_dataset('json', data_files=...) reads it."
+      - "InstructLab does not train on raw rows — it needs seed_examples in a qna.yaml. If this database IS the seed source, its rows become qna seed_examples, not a JSONL for trl."
+    must_not:
+      - "Never embed a live DB connection string, host or credentials. The loader reads its DSN from the environment and raises NotImplementedError, naming the AIR id, when it is unset — it does not guess a localhost DSN."
+      - "Never fabricate the source schema. If the columns that map to prompt/completion are unknown, that is a blocking unknown, not a guessed SELECT."
+
+  # --- raw data / base-model provenance ------------------------------------- #
+  - for_kind: external
+    path: "data/{id}_source.md"
+    format: markdown
+    template: null
+    evidence: "[INF] An external box in a training drawing is either the raw-data origin or the base-model registry; both are provenance the model card and licensing depend on, and neither has a generatable endpoint."
+    schema_facts:
+      - "An `external` box is the BASE MODEL source (Hugging Face Hub id, watsonx model id, a local checkpoint path) or the RAW DATA origin. Write down which, with the exact identifier the drawing gives — a HF repo id like `meta-llama/Llama-3.1-8B` or a watsonx model id."
+      - "The base-model identifier flows into train/config.yaml `base_model` and into the model card's provenance + licence section; the licence of the base model governs the tuned model."
+      - "Record the licence and any usage restrictions of the base model here — this is the `compliance` nonfunctional turned into documentation."
+    must_not:
+      - "Never invent a Hugging Face repo id, a download URL or a licence. An unknown source is a TODO naming the AIR id, never a plausible `org/model` that may not exist or may be gated."
+
+  # --- resulting-model / dataset store -------------------------------------- #
+  - for_kind: storage
+    path: "data/{id}_store.md"
+    format: markdown
+    template: null
+    evidence: "[INF] A storage box is ambiguous in a training drawing — dataset store or model-output store — so it becomes a manifest that says which, never invented code."
+    schema_facts:
+      - "Decide which this storage is. If it holds the TRAINING DATA, describe the layout the data-prep step writes to (path, format: JSONL/Parquet, split names). If it holds the RESULTING MODEL, the model itself is documented by model_card.md and the weights land under models/ — this manifest just names the location and retention."
+      - "The resulting-model store is where `ilab model train` / the generic Trainer writes the adapter or merged weights; record the path and whether it is the LoRA adapter or a merged full model."
+    must_not:
+      - "Never invent a bucket name, ARN or path. Name only what the drawing states; leave the rest as a TODO with the AIR id."
+
+  # --- pipeline steps: data-gen / train / eval boxes ------------------------ #
+  - for_kind: job
+    path: "pipeline/{id}.py"
+    format: python
+    template: templates/pipeline_step.py
+    evidence: "[INF] A job box is one step of the fine-tuning pipeline (data generation, training, or evaluation); it orchestrates the reusable train/eval library, it is not a fresh training loop."
+    schema_facts:
+      - "CLASSIFY the job by its role in the drawing: a 'data generate'/'SDG'/'synthetic' box shells out to `ilab data generate` (InstructLab) or calls data/prepare_*.py (generic); a 'train'/'fine-tune'/'SFT'/'LoRA' box calls train/train.py; an 'evaluate'/'benchmark' box calls eval/evaluate.py."
+      - "The step imports from the project's train/eval library rather than re-implementing it, so there is exactly one training loop and one eval harness in the project."
+      - "A step whose role is training or data-generation cannot actually run offline (it needs a GPU and real data), so it raises NotImplementedError naming the AIR id and the missing input rather than pretending."
+    must_not:
+      - "Never re-implement the training loop inside a job step. Duplicated loops drift, and one of them silently trains with the wrong hyperparameters."
+      - "Never leave a `pass` body or a fake success. An unrunnable step raises NotImplementedError with the AIR id and what is missing (GPU, dataset, base model)."
+
+  - for_kind: function
+    path: "pipeline/{id}.py"
+    format: python
+    template: templates/pipeline_step.py
+    evidence: "[INF] Same rationale as job: a function in a training drawing is a single pipeline callable (a data-gen or a scoring step)."
+
+  - for_kind: service
+    path: "pipeline/{id}.py"
+    format: python
+    template: templates/pipeline_step.py
+    evidence: "[INF] A 'training service' / 'eval service' box in a training drawing is a long-running step, not an HTTP service this profile deploys; it maps to the same pipeline step."
+    schema_facts:
+      - "A service box here is a long-running TRAIN or EVAL step, not a web service. This profile does not generate a server; the resulting model is served by a different profile."
+    must_not:
+      - "Never generate a Flask/FastAPI server here. Serving the tuned model is out of scope; this box is a training or evaluation step."
+
+  # --- project-level canonical scaffolding (once per run) -------------------- #
+  - for_kind: project
+    path: "train/config.yaml"
+    format: yaml
+    template: templates/config.yaml
+    evidence: "[DOC] trl.SFTConfig / transformers.TrainingArguments field names + peft.LoraConfig field names (huggingface.co/docs/trl, /peft)."
+    schema_facts:
+      - "This is the single source of truth for hyperparameters, read by both train/train.py and the pipeline train step. Keys: base_model, method (sft|lora|qlora), output_dir, dataset_path, and nested `lora:` (r, alpha, dropout, target_modules) and `training:` (num_train_epochs, per_device_train_batch_size, gradient_accumulation_steps, learning_rate, max_seq_length, bf16)."
+      - "For the InstructLab path, the equivalent configuration is ~/.config/instructlab/config.yaml produced by `ilab config init`; this file is the generic-path counterpart. configs/instructlab.yaml documents the ilab side."
+      - "LoRA typical starting points documented by TRL/PEFT: r=16, lora_alpha=32, lora_dropout=0.05, target_modules for a LLaMA-family model are q_proj/k_proj/v_proj/o_proj (and optionally the MLP projections)."
+    must_not:
+      - "Never set values as if they were verified for a specific base model — the numbers are documented starting points, and the file must say so. Wrong target_modules for the actual architecture make LoRA silently train nothing."
+      - "Never put a secret (HF token, API key) in this file. Tokens come from the environment (HF_TOKEN)."
+
+  - for_kind: project
+    path: "train/train.py"
+    format: python
+    template: templates/train.py
+    evidence: "[DOC] trl.SFTTrainer + peft.LoraConfig + transformers.AutoModelForCausalLM/AutoTokenizer usage (huggingface.co/docs/trl)."
+    schema_facts:
+      - "Loads train/config.yaml, builds a LoraConfig from the `lora:` block, an SFTConfig/TrainingArguments from the `training:` block, loads base_model + tokenizer, wraps the dataset, and runs SFTTrainer.train()."
+      - "The imports (transformers, trl, peft, datasets, torch) are guarded: if a package or a CUDA device is missing, it raises NotImplementedError naming the AIR run and the missing dependency, instead of failing deep inside a library or, worse, running on CPU as if that were fine."
+      - "task_type for causal LM LoRA is peft.TaskType.CAUSAL_LM; the model is loaded in bf16 when the config asks for it and a GPU is present."
+    must_not:
+      - "Never fabricate a dataset. If dataset_path does not exist, raise NotImplementedError naming the AIR id — do NOT train on a toy in-memory list and report success."
+      - "Never silently fall back to CPU for a real fine-tune. CPU 'training' of a 7B+ model is not a smaller run, it is a hang that looks like progress."
+      - "Never hardcode a Hugging Face token; read HF_TOKEN from the environment."
+
+  - for_kind: project
+    path: "eval/evaluate.py"
+    format: python
+    template: templates/evaluate.py
+    evidence: "[DOC] The evaluation harness compares tuned vs base; lm-evaluation-harness (`lm_eval`) and `ilab model evaluate` are the two documented routes."
+    schema_facts:
+      - "The harness loads BOTH the base model and the tuned model (or the base + the LoRA adapter) and reports a metric for each plus the delta — a fine-tune with no before/after number is a claim, not a result."
+      - "Two documented routes: `ilab model evaluate` (MT-Bench / MMLU branches, InstructLab path) and lm-evaluation-harness for the generic path. This file drives the generic path and documents the ilab command for the other."
+      - "Metrics come from the drawing's intent: an accuracy/benchmark box -> a task from lm-eval; a qualitative box -> MT-Bench-style judgement. The base-vs-tuned delta is always reported."
+    must_not:
+      - "Never report only the tuned score. Without the base score the delta is unknown and 'it improved' is unfalsifiable."
+      - "Never invent benchmark numbers. If the model or dataset is missing, raise NotImplementedError naming the AIR id; do not print a plausible score."
+
+  - for_kind: project
+    path: "model_card.md"
+    format: markdown
+    template: templates/model_card.md
+    evidence: "[DOC] Hugging Face model-card sections (intended use, training data, procedure, evaluation, limitations, licence) + the compliance/cost nonfunctionals this profile honours as documentation."
+    schema_facts:
+      - "Sections: model summary, base model + licence, intended use & out-of-scope use, training data & provenance, training procedure (method + hyperparameters, cross-referencing train/config.yaml), evaluation (base-vs-tuned deltas from eval/evaluate.py), limitations & bias, and estimated compute/cost."
+      - "The `compliance` nonfunctional becomes the base-model-licence + data-provenance section; the `cost` nonfunctional becomes the estimated GPU-hours/accelerator note. Both are documentation, and the card says they were not enforced in code."
+      - "Numbers are filled from the eval run, not asserted up front — an empty evaluation section with a TODO is more honest than invented metrics."
+    must_not:
+      - "Never state evaluation metrics that no eval run produced. A TODO beats a fabricated benchmark table."
+      - "Never omit the base-model licence — the tuned model inherits it, and shipping without it is the single most common fine-tuning compliance failure."
+
+  - for_kind: project
+    path: "configs/instructlab.yaml"
+    format: yaml
+    template: templates/instructlab_config.yaml
+    evidence: "[DOC] `ilab config init` writes ~/.config/instructlab/config.yaml with generate/train/evaluate/serve sections; docs.instructlab.ai."
+    schema_facts:
+      - "This documents the InstructLab side. The canonical config is produced by `ilab config init`; this file is a checked-in reference of the fields that matter (generate.model, generate.num_instructions/sdg_scale_factor, train.model_path, train.num_epochs, evaluate.*)."
+      - "InstructLab reads the taxonomy tree under taxonomy/, runs `ilab data generate` to synthesise instructions from the qna seeds, then `ilab model train`, then `ilab model evaluate`. The Makefile wires those three commands."
+    must_not:
+      - "Never present this as the authoritative config — `ilab config init` owns it and versions drift between InstructLab releases. This file is a documented reference, and it says so."
+
+  - for_kind: project
+    path: "Makefile"
+    format: text
+    template: templates/Makefile
+    evidence: "[DOC] The InstructLab flow is three commands (`ilab data generate`, `ilab model train`, `ilab model evaluate`); the generic flow calls train/train.py and eval/evaluate.py."
+    schema_facts:
+      - "Targets for BOTH paths. InstructLab: `data-generate` (ilab data generate), `train` (ilab model train), `evaluate` (ilab model evaluate), `taxonomy-diff` (ilab taxonomy diff). Generic: `train-generic` (python train/train.py), `evaluate-generic` (python eval/evaluate.py)."
+      - "A `setup` target installs requirements.txt; a `check` target runs the structural gate (py_compile + yaml) so the offline honesty of this project is one command away."
+    must_not:
+      - "Never imply `make train` runs offline on this machine. The target invokes ilab/GPU work; the Makefile comment says a GPU and a generated dataset are prerequisites."
+
+  - for_kind: project
+    path: "requirements.txt"
+    format: text
+    template: templates/requirements.txt
+    evidence: "[NV] These are the packages the generic scripts import; NONE is installed on this machine, so the pins are documented, not verified against a resolved environment."
+    schema_facts:
+      - "List only what is imported: instructlab (InstructLab path); transformers, peft, trl, datasets, accelerate, torch (generic training); lm-eval (generic evaluation). Pin conservatively and comment that CUDA/torch build depends on the host."
+      - "A dependency the offline gate cannot exercise (everything here needs a GPU or a large download) is flagged as such, not assumed present."
+    must_not:
+      - "Never claim a version is verified. Nothing here was installed or resolved on the authoring machine."
+
+  - for_kind: project
+    path: "README.md"
+    format: markdown
+    template: templates/README.md
+    evidence: "[DOC] The two run orders (InstructLab vs generic) and the honest validation level."
+    schema_facts:
+      - "State BOTH run orders. InstructLab: `ilab config init` -> author taxonomy/*/qna.yaml -> `ilab data generate` -> `ilab model train` -> `ilab model evaluate` -> fill model_card.md. Generic: prepare data (data/prepare_*.py) -> edit train/config.yaml -> `python train/train.py` -> `python eval/evaluate.py` -> fill model_card.md."
+      - "State the validation level honestly: structural-only. Say that no training was run, no framework is installed here, and every GPU/data-dependent step raises NotImplementedError until real inputs and hardware are supplied."
+    must_not:
+      - "Never imply the project was trained or evaluated. It is a scaffold; the numbers come from the reader's own run."
+
+# -----------------------------------------------------------------------------
+parameters:
+  - title: "Fine-tuning approach"
+    required: [pipeline]
+    properties:
+      pipeline:
+        type: string
+        enum: [instructlab, generic-sft]
+        default: instructlab
+        description: "instructlab = taxonomy qna.yaml + ilab data generate/train/evaluate. generic-sft = Hugging Face transformers+peft+trl with train/config.yaml."
+      base_model:
+        type: string
+        default: ""
+        description: "Base-model identifier: a Hugging Face repo id (e.g. meta-llama/Llama-3.1-8B), a watsonx model id, or a local checkpoint path. Blank until the drawing or the human names it — never guessed."
+  - title: "LoRA / SFT hyperparameters"
+    advanced: true
+    properties:
+      method: {type: string, enum: [sft, lora, qlora], default: lora}
+      lora_r: {type: integer, default: 16, description: "LoRA rank. Documented starting point, not tuned for a specific model."}
+      lora_alpha: {type: integer, default: 32}
+      lora_dropout: {type: number, default: 0.05}
+      num_train_epochs: {type: number, default: 3}
+      learning_rate: {type: number, default: 0.0002}
+      max_seq_length: {type: integer, default: 2048}
+  - title: "InstructLab"
+    advanced: true
+    properties:
+      taxonomy_kind:
+        type: string
+        enum: [knowledge, skill]
+        default: knowledge
+        description: "knowledge leaves need context and a grounding document; skills need only seed Q/A pairs."
+      sdg_scale_factor:
+        type: integer
+        default: 30
+        description: "How many synthetic instructions `ilab data generate` derives per seed example. Documented default range, verify against your InstructLab version."
+  - title: "Evaluation"
+    advanced: true
+    properties:
+      eval_harness:
+        type: string
+        enum: [lm-eval, ilab-mt-bench, ilab-mmlu]
+        default: lm-eval
+        description: "lm-evaluation-harness for the generic path; ilab model evaluate (MT-Bench / MMLU branches) for InstructLab."
+      report_delta_vs_base:
+        type: boolean
+        default: true
+        description: "Always score the base model too, so the report is a delta and not a bare number."
+
+inference_rules:
+  - {param: pipeline, from: "experiment_plan.stack.finetuning", when_absent: default, default: "instructlab"}
+  - {param: method, from: "experiment_plan.stack.finetuning_method", when_absent: default, default: "lora"}
+  - param: base_model
+    from: "experiment_plan.stack.base_model"
+    when_absent: ask
+    question: "Which base model is being fine-tuned? Give the exact Hugging Face repo id, watsonx model id, or local checkpoint path."
+    blocking: true
+  - param: eval_harness
+    from: "experiment_plan.stack.eval_harness"
+    when_absent: default
+    default: "lm-eval"
+
+questions:
+  - id: q_pipeline
+    param: pipeline
+    when: {always: true}
+    question: "InstructLab (taxonomy + ilab data generate/train/evaluate) or the generic Hugging Face SFT/LoRA path? They produce different projects."
+    options: ["instructlab", "generic-sft"]
+    blocking: true
+    why: "The two paths share almost no artifacts: one authors a qna.yaml taxonomy, the other writes a transformers+peft training loop. Guessing produces half of each and a project that runs neither."
+  - id: q_base_model
+    param: base_model
+    when: {always: true}
+    question: "What is the exact base model? A Hugging Face repo id, a watsonx model id, or a local checkpoint path."
+    blocking: true
+    why: "The base model sets the LoRA target_modules, the tokenizer, the chat template AND the licence the tuned model inherits. A guessed repo id imports as a 404 at download time, or worse, silently pulls a different architecture."
+  - id: q_seed_data
+    param: seed_data
+    when: {has_component_kind: knowledge_base}
+    question: "Where do the taxonomy seed examples come from, and for knowledge, what document grounds them (repo/commit)?"
+    blocking: true
+    why: "A qna.yaml with invented seeds teaches the model invented facts. InstructLab SDG amplifies whatever the seeds say, so a wrong seed becomes hundreds of wrong synthetic examples."
+  - id: q_dataset_format
+    param: dataset_format
+    when: {has_component_kind: database}
+    question: "For the generic path, what columns of the source become prompt/completion (or the chat messages)? And where is the exported dataset written?"
+    options: ["messages (chat)", "prompt/completion (instruction)", "not decided yet"]
+    blocking: true
+    why: "SFTTrainer needs a known text field. The wrong column mapping trains the model on the wrong side of the conversation, which looks like a bad model and is a data-prep bug."
+  - id: q_gpu
+    param: gpu_available
+    when: {has_component_kind: job}
+    question: "What accelerator will the training run on (GPU model / count, or a managed service like RHOAI / watsonx)? It is documented in the model card, not provisioned here."
+    options: ["single GPU", "multi-GPU", "managed (RHOAI/watsonx)", "not decided yet"]
+    blocking: false
+    why: "This profile does not provision compute. Naming it lets the model card record the cost/compute nonfunctional honestly instead of leaving a training project that reads as runnable on a laptop."
+
+phases:
+  analyze: inherit
+  plan: inherit
+  scaffold: override
+  validate: override
+
+bob_modes:
+  scaffold: {slug: arch-scaffold, approval_mode: yolo, cwd: "{project_root}"}
+  validate: {slug: arch-validator, approval_mode: auto_edit, cwd: "{project_root}"}
+
+templates: templates/
+
+validate:
+  level: structural-only
+  level_reason: >
+    Nothing on the authoring machine can prove a fine-tune runs: instructlab,
+    transformers, peft, trl, datasets and accelerate are all absent (checked by
+    importlib.metadata), and training needs a GPU and real data no drawing
+    carries. So the gates here are py_compile, YAML well-formedness and ruff —
+    they prove the scaffolding parses, not that it trains. The UI must show this
+    level next to the download button; promising a fine-tune we cannot run is how
+    a generator loses an ML team on day one.
+  checks:
+    - name: py-syntax
+      cmd: "python3 -m py_compile {files:**/*.py}"
+      requires: [{binary: python3}]
+      confidence: "[VER] py_compile is stdlib and catches every syntax error in the generated train/eval/pipeline scripts."
+      degrade: "No Python interpreter: the generated scripts are not parsed at all."
+      blocking: true
+    - name: yaml-wellformed
+      cmd: "python3 -c \"import sys,glob,yaml; [yaml.safe_load(open(f)) for g in ('taxonomy/**/qna.yaml','train/config.yaml','configs/*.yaml') for f in glob.glob(g,recursive=True)]\""
+      requires: [{python_module: yaml}]
+      confidence: "[VER] PyYAML is installed here; safe_load proves qna.yaml / config.yaml are well-formed YAML."
+      degrade: "Without PyYAML the taxonomy and config YAML are not parsed. It only proves well-formedness, NOT that qna.yaml matches the InstructLab schema — install `ilab` and run `ilab taxonomy diff` for the real check. `pip install pyyaml`."
+      blocking: true
+    - name: ruff
+      cmd: "ruff check train/ eval/ pipeline/ data/"
+      requires: [{binary: ruff}]
+      confidence: "[VER] ruff is installed on this machine and catches undefined names / unused imports in the generated scripts."
+      degrade: "Skipping lint: unused imports and undefined names are not caught until the scripts run under a real interpreter. `pip install ruff`."
+      blocking: false
+    - name: instructlab-taxonomy
+      cmd: "ilab taxonomy diff --taxonomy-path taxonomy"
+      requires: [{binary: ilab}]
+      confidence: "[DOC] `ilab taxonomy diff` validates every changed qna.yaml against the InstructLab schema (docs.instructlab.ai)."
+      degrade: "ilab is NOT installed here, so qna.yaml is checked for well-formed YAML only — a well-formed-but-wrong taxonomy (version 1, missing context, invented grounding) would pass. Install with `pip install instructlab` to upgrade this target's honesty."
+      blocking: false

@@ -1,0 +1,34 @@
+# arch2code: generated from AIR {{run_id}} :: {{component_id}}
+# source: {{source_artifact}}  evidence: {{evidence}}
+# DO NOT EDIT BY HAND — regenerate via the arch-scaffold mode
+#
+# Contract: ibm_watsonx_orchestrate.agent_builder.agents.types.KnowledgeBaseSpec
+# (ADK 2.12.0). There is no storage: block and no top-level chunking: block —
+# both were invented by an earlier generation of these templates.
+
+spec_version: v1
+kind: knowledge_base
+
+name: "{{knowledge_base_name}}"
+description: >
+  {{knowledge_base_description}}
+  # The agent reads this to decide whether to search here. Name the subject
+  # matter and the boundary: "Card fees, limits and dispute policy. Does not
+  # cover loans."
+
+documents:
+  # Paths relative to this file. A knowledge base with no documents imports
+  # cleanly and then answers every question with silence — if the documents do
+  # not exist yet, that is a blocking unknown for the human, not a TODO comment.
+  - "documents/{{document_file}}"
+
+vector_index:
+  embeddings_model_name: "{{embeddings_model_name}}"   # e.g. watsonx/ibm/slate-125m-english-rtrvr-v2
+  chunk_size: 512
+  chunk_overlap: 64
+  # limit: 10
+  # extraction_strategy: standard
+
+# Alternative, when the index already exists somewhere you own: drop vector_index
+# and use conversational_search_tool instead (Milvus, Elasticsearch, OpenSearch,
+# AstraDB or a custom search connection). Do not emit both.

@@ -10,25 +10,24 @@ not say something, the pipeline does not invent it — it asks.
 
 ---
 
-## Try it
+## Watch it run
 
 ### **https://bob-arch2code.2clgzcr0unhv.us-south.codeengine.appdomain.cloud**
 
-**Open that link and watch the real thing run.** There is nothing to install: no CLI, no Bob
-licence, no IDE, no watsonx credentials of your own. Drop a drawing on the page and you watch
-the model reason, tool call by tool call, until it stops at the human gate and asks you to
-decide. The link is open — no sign-in, nothing to request — because a stranger should be able
-to see the mechanism work in under a minute.
+Open that link and watch the real thing run. Drop a drawing on the page and you watch the model reason, tool call by tool call, until it stops at the human gate and asks you to
+decide. 
 
-It also means every run anyone starts spends real quota. Runs are capped per stage and only one
-pipeline run executes at a time, which is enough for a demonstration and is not a security
-model. If the link does not answer, [running it locally](#run-it-yourself) is one command.
+<a href="https://github.com/ce-bsb/arch2code/raw/main/docs/videos/arch2code-github-home-animation.mp4"><img src="docs/videos/arch2code-github-home-animation.gif" alt="arch2code demo — drop a drawing and watch the pipeline run to the human gate" width="100%"></a>
 
-![The arch2code landing page: a large drop zone reading "Drop your architecture drawing here", a five-card strip titled WHAT HAPPENS NEXT covering intake, analyst, critic, your gate and scaffold, and an EARLIER RUNS table showing run 20260722-0528-modeb2 on exemplo-rascunho.png at 3/5 with the status AWAITING INPUT](docs/images/ui-01-landing.png)
+> ▶ The clip above **plays and loops automatically** (≈3× speed). **[Watch the full-length HD recording](https://github.com/ce-bsb/arch2code/raw/main/docs/videos/arch2code-github-home-animation.mp4)** — the same run, in real time, from an empty drop zone to the human gate.
+
+Every run anyone starts spends real quota. Runs are capped per stage and only one pipeline run
+executes at a time, which is enough for a demonstration and is not a security model. If the link
+does not answer, [running it locally](#run-it-yourself) is one command.
 
 Everything the browser does, the pipeline also does from inside the Bob IDE with the
-`🔀 arch2code` orchestrator mode. The web application is a second front door onto the same
-configuration, not a reimplementation of it.
+`🔀 arch2code` orchestrator mode. **The web application is a second front door onto the same
+configuration, not a reimplementation of it** — see [`webapp/README.md`](webapp/README.md).
 
 ---
 
@@ -58,7 +57,37 @@ By the time the transcription is done, the momentum that produced the drawing is
 arch2code attacks the transcription, not the thinking. The estimate in our challenge
 submission is ~200 h → ~8 h for the same deliverable, of which 4.25 h are a human deciding
 rather than transcribing. **That figure is our own baseline for our own work, not a measurement
-of this repository**, and it is stated that way wherever it appears.
+of this repository** — see [ROI and business outcomes](#roi-and-business-outcomes) for how it is
+derived and what it does and does not claim.
+
+---
+
+## The core innovation: giving Bob eyes, auditably
+
+IBM Bob is a coding agent. **It cannot see an image.** Its context mentions reject binary files
+("binary files not supported"), `read_file` extracts *text* from a `.pdf` or `.docx` but never
+interprets pixels, and its tool list — `read / search / list / write / apply_diff /
+execute_command / use_mcp_tool / switch_mode / ask_followup_question` — contains no vision tool
+at all. Dragging `@drawing.png` into the chat and asking "explain this architecture" simply does
+not work.
+
+The **only** supported path for pixels to enter Bob is the `mcp` tool group and `use_mcp_tool`.
+So arch2code ships **`arch_vision`**, a local MCP server that exposes watsonx.ai multimodal
+inference as four Bob tools. That is the whole novelty, and it has a consequence worth more than
+the convenience it replaces:
+
+> Because the drawing is read through an explicit, versioned tool call instead of a chat
+> attachment, every reading is **auditable** — a pinned model, a versioned prompt, a confidence
+> per element, and a stored record of exactly which bytes the model saw. Dragging an image into
+> a chat window can tell you none of that.
+
+**Any diagram, any image, any stack.** The intake stage routes by file type. A structured
+source (`.drawio`, `.puml`, `.mmd`, `.xml`, `.md`, `.json`, `.yaml`) takes a **deterministic
+parser path — zero tokens, nothing inferred**, and always wins over an image of the same
+drawing. A raster (`.png .jpg .jpeg .webp .heic .bmp .tif`) or a scanned PDF goes down the
+vision path. And the *output* platform is a contract input, not a hard-coded target: the same
+pipeline emits watsonx Orchestrate ADK, LangGraph, CrewAI, a container microservice, mainframe
+COBOL or an RPA flow — see [target platforms](#target-platforms).
 
 ---
 
@@ -69,60 +98,45 @@ of this repository**, and it is stated that way wherever it appears.
 Read it left to right.
 
 **Input — the left column.** Anything that carries an architecture: a napkin photo, a
-whiteboard shot, a screenshot, a PDF page, or a structured source. The highlighted box is the
-important one: `.drawio`, `.puml` and `.mmd` take the **deterministic parser path — zero
-tokens, nothing inferred**, and a structured source always wins. Using vision where a parser
-exists is treated as an engineering mistake, not a preference. Everything lands in
-`.arch/intake/inbox/`.
+whiteboard shot, a screenshot, a PDF page, or a structured source. The highlighted box takes the
+deterministic parser path. Everything lands in `.arch/intake/inbox/`.
 
-**Two ways in.** The Bob IDE with the `🔀 arch2code` orchestrator mode, or the web
-application. Same modes, same rules, same artifacts on disk. Under them, the box of use cases
-the pipeline has actually been run against — card servicing with multiple agents, price
-research and analysis, investment advisory, portfolio recommendation — and the note that one of
-them was **BLOCKED** by the critic rather than generated.
+**Two ways in.** The Bob IDE with the `🔀 arch2code` orchestrator mode, or the web application.
+Same modes, same rules, same artifacts on disk. Under them, the box of use cases the pipeline
+has actually been run against — card servicing with multiple agents, price research and
+analysis, investment advisory, portfolio recommendation — and the note that one of them was
+**BLOCKED** by the critic rather than generated.
 
 **The workspace boundary.** The dashed rectangle is one Bob project workspace, governed by a
 single file, [`.bob/custom_modes.yaml`](.bob/custom_modes.yaml). That file *is* the product:
 six modes, their roles, their rulebooks, their tool groups and their write scopes.
 
-**The MCP lane, across the top.** Bob does not ingest images: context mentions reject binary
-files, `read_file` extracts text but does not interpret pixels, and there is no native vision
-tool. The only supported path for pixels is the `mcp` tool group. So `arch_vision` is a local
-MCP server (stdio transport) exposing watsonx.ai multimodal inference as four Bob tools —
-`arch_vision_list_intake`, `arch_vision_describe_diagram`, `arch_vision_extract_architecture`,
-`arch_vision_verify_element` — on a pinned model
-(`meta-llama/llama-4-maverick-17b-128e-instruct-fp8`) with a versioned prompt stamped into
-every result. The solid arrow goes down into intake; the **dotted** one goes into the critic,
-and it is labelled *verify, not re-extract* — that is the second pass, and it is the mechanism
-the whole project rests on. **The platform constraint is what produced the auditability.**
-Dragging an image into a chat window cannot tell you which model read it.
+**The MCP lane, across the top.** `arch_vision` — a local stdio MCP server exposing watsonx.ai
+multimodal inference as four Bob tools. The solid arrow goes down into intake; the **dotted** one
+goes into the critic, labelled *verify, not re-extract* — the second pass the whole project rests
+on. [Full detail below.](#the-arch_vision-mcp-server)
 
-**The five gated stages.** One card per stage: the mode slug, what it is for, the tool groups
-it was granted, and the directory it is allowed to write. They chain **by file, not by
-session** — each stage reads the previous stage's artifact by absolute path, in a clean Bob
-session. Note the fourth card: `arch-scaffold` has no `mcp` group at all. **The code-writing
-mode cannot call vision**, by construction; it can only read the contract.
+**The five gated stages.** One card per stage: the mode slug, what it is for, the tool groups it
+was granted, and the directory it is allowed to write. They chain **by file, not by session** —
+each stage reads the previous stage's artifact by absolute path, in a clean Bob session. Note the
+fourth card: `arch-scaffold` has no `mcp` group at all. **The code-writing mode cannot call
+vision**, by construction; it can only read the contract.
 
 **The loopback.** The dotted magenta line from the critic back to the analyst is
-`VERDICT: BLOCKED`. It carries concrete questions for the human. It does not proceed with a
-caveat — *"approved with caveats"* is explicitly forbidden in the critic's rubric.
+`VERDICT: BLOCKED`. It carries concrete questions for the human. *"Approved with caveats"* is
+explicitly forbidden in the critic's rubric.
 
-**Shared Bob assets, the strip underneath.** `.bob/rules/` and `.bob/rules-<slug>/` (global and
-per-mode rubrics, auto-loaded), four skills under `.bob/skills/`, the AIR JSON Schema with its
-automatic gates, and `.bob/mcp.json` — which carries no credentials and no absolute paths, so
-it is shareable. All committed to Git, so the tenth engineer to clone the repository inherits
-the same pipeline as the first.
+**Shared Bob assets, the strip underneath.** [`.bob/rules/`](.bob/rules/) and
+`.bob/rules-<slug>/` (global and per-mode rubrics, auto-loaded), four skills under
+[`.bob/skills/`](.bob/skills/), the AIR JSON Schema with its automatic gates, and
+[`.bob/mcp.json`](.bob/mcp.json) — which carries no credentials and no absolute paths. All
+committed to Git, so the tenth engineer to clone the repository inherits the same pipeline as the
+first.
 
-**The black callout.** *Write scope is a permission, not an instruction.* It prints the actual
-`fileRegex` of the scaffold mode. This is the barrier against spec drift, and
-[it has its own section below](#why-five-modes-and-not-one-prompt).
-
-**Output — the right column.** Whatever the drawing is: agentic (Orchestrate ADK, LangGraph),
-enterprise and legacy (RPA, mainframe, COBOL), cloud-native (services, IaC) — plus, always,
-contracts, tests, a README, a Makefile and a `manifest.json` mapping component id → files. The
-platform is a contract input, not an assumption baked into the generator. Under it, the header
-that opens every generated file: the run id, the component id, the source artifact, and the
-bounding box it came from.
+**Output — the right column.** Whatever the drawing is: agentic (Orchestrate ADK, LangGraph,
+CrewAI), enterprise and legacy (RPA, mainframe COBOL), cloud-native (container microservice) —
+plus, always, contracts, tests, a README, a Makefile and a `manifest.json` mapping component id →
+files.
 
 ### The five stages, in one table
 
@@ -141,6 +155,70 @@ trail navigable a year later.
 
 ---
 
+## The `arch_vision` MCP server
+
+The heart of the innovation, in [`mcp/arch_vision/`](mcp/arch_vision/). It is **1,413 lines**
+across four programs — the server itself and three diagnostics — because a tool that will not run
+inside Bob without a working watsonx.ai account, a reachable model and a correct interpreter has
+to be able to *tell you which one is broken*.
+
+| File | Lines | What it is |
+|---|---|---|
+| [`server.py`](mcp/arch_vision/server.py) | 616 | The stdio MCP server: 4 tools, pinned model, versioned prompts, quality gate |
+| [`preflight.py`](mcp/arch_vision/preflight.py) | 384 | 6 diagnostic gates + empirical multimodal probing of your own catalog |
+| [`run_image.py`](mcp/arch_vision/run_image.py) | 254 | End-to-end smoke test over a real MCP handshake, against a ground truth |
+| [`configure_bob.py`](mcp/arch_vision/configure_bob.py) | 159 | Writes `.bob/mcp.json` with an interpreter *proven* to import `mcp` |
+
+### The four tools
+
+| Tool | Purpose | Used by |
+|---|---|---|
+| `arch_vision_list_intake` | Lists artifacts in the inbox and the extraction path chosen for each (deterministic vs vision) | intake |
+| `arch_vision_describe_diagram` | Free-form technical description of an image (exploration only) | — |
+| `arch_vision_extract_architecture` | **Structured** extraction: components, connections, evidence, per-element confidence, quality flags | intake / analyst |
+| `arch_vision_verify_element` | Independent verification of **one** claim, under a sceptical prompt | critic |
+
+**The split between `extract` and `verify` is the mechanism.** `extract` asks *"what do you
+see?"* — a framing that rewards completing the picture. `verify` asks *"someone may have read this
+wrong; does this arrow really exist?"* — a framing that rewards doubt. Different prompt, different
+framing, **decorrelated error.** Asking the same question twice only confirms the same bias, which
+is why "tell the model to review its own answer" pays so little. The critic therefore calls
+`verify`, never `extract` again.
+
+### What makes each reading auditable
+
+- **Pinned model.** `meta-llama/llama-4-maverick-17b-128e-instruct-fp8` by default
+  (`WATSONX_VISION_MODEL_ID`), talking to the watsonx.ai chat API (`version=2024-10-08`) — not
+  "whatever the chat happened to route to".
+- **Versioned prompts.** Every structured result is stamped `extract@1.1`; every verification is
+  stamped `verify@1.1`. Change the prompt, change the version, and old artifacts still say which
+  prompt produced them.
+- **Per-element confidence** and an explicit `_quality` block naming the connections that need a
+  second pass, the broken references, and the action required.
+- **Self-configuration, no secret in a versioned file.** The server reads the `.env` sitting next
+  to it and derives the project root from `__file__`. Consequence: `.bob/mcp.json` carries **no
+  credential and no machine-specific path**, so it is safe to commit and share.
+- **Guardrails before the token is spent.** A `>5 MB` image is refused with the reason; a wrong
+  `model_id` returns a 404 that *names the catalog endpoint to consult*; a timeout says which knob
+  to turn. Non-image extensions never reach the model at all.
+
+### Prove it on your own account
+
+```bash
+python3 mcp/arch_vision/preflight.py            # 6 gates: credentials, scope, IAM, catalog, model, images
+python3 mcp/arch_vision/preflight.py --probe    # which catalogued models actually accept an image
+python3 mcp/arch_vision/preflight.py --extract  # run the fixture against tests/ground-truth-example.json
+```
+
+`--extract` is the only test that answers *does vision work in MY catalog*. It scores the
+extraction against a ground truth that includes a **trap line** — a bare line with no arrowhead —
+and asserting a direction on it is a critical failure, not a warning. `configure_bob.py` then
+writes `.bob/mcp.json` pointing at an interpreter that has *proven* it can import `mcp`, `httpx`
+and `pydantic` — using `.absolute()` and never `.resolve()`, because resolving follows a venv
+symlink to the system `python3` that cannot see the venv's packages.
+
+---
+
 ## What each stage delivers
 
 A stage is not "a prompt that ran". It is an artifact on disk, an exit criterion that artifact
@@ -153,49 +231,44 @@ pipeline restartable at any stage, and auditable after the fact.
 | **2 · Context**<br>`arch-analyst` | `.arch/air/<run>/air.json` — **the contract** | Validates against `air.schema.json` (JSON Schema 2020-12, `additionalProperties: false` at every level). Observed, inferred and absent are in three separate arrays. Every assumption declares an `impact`. `experiment_plan` carries at least one falsifiable hypothesis and `out_of_scope` is not empty | One file. From here on, nothing downstream reads the drawing again — the AIR is the single source of truth, and stage 4 is permitted to read nothing else |
 | **3 · Critique**<br>`arch-critic` | `.arch/review/<run>/verdict.md` | The last non-empty line is **exactly** `VERDICT: APPROVED` or `VERDICT: BLOCKED`. No third value, no *"approved with caveats"* — a caveat has to become an `unknowns[]` entry instead. The critic may not edit the AIR it is reviewing | Either permission to generate, or a ranked list of findings — each naming the element id and the correction it wants — plus closed questions routed back to the analyst and to the human |
 | **4 · Scaffold**<br>`arch-scaffold` | The code tree + `.arch/build/<run>/manifest.json` | Refuses to write a single file unless `verdict.md` says `APPROVED`. Every generated file opens with the traceability header. The manifest maps `component_id → [files]`. Every external dependency has a local stub, so the tree runs offline. An unimplemented handler raises `NotImplementedError` naming the AIR id — never a silent `pass` | A tree that comes up on its own and can be executed, and a manifest that answers *"where did this file come from?"* without asking anybody |
-| **5 · Validate**<br>`arch-validator` | `.arch/run/<run>/validation.md` | Each hypothesis from the AIR is marked VERIFIED, REFUTED or INCONCLUSIVE, with the exact command and the real output pasted in. Changing the architecture to make a test pass is forbidden — if the fix needs a new component, the AIR is wrong and the run goes back to stage 2. Closes with *"What the drawing did not anticipate"* | The human architect, who gets back the list of things the prototype discovered that the original drawing did not account for.<br>**Not yet demonstrated — see [what has not been verified](#what-has-not-been-verified)** |
+| **5 · Validate**<br>`arch-validator` | `.arch/run/<run>/validation.md` | Each hypothesis from the AIR is marked VERIFIED, REFUTED or INCONCLUSIVE, with the exact command and the real output pasted in. Changing the architecture to make a test pass is forbidden — if the fix needs a new component, the AIR is wrong and the run goes back to stage 2 | The human architect, who gets back the list of things the prototype discovered that the original drawing did not account for.<br>**Not yet demonstrated — see [what has not been verified](#what-has-not-been-verified)** |
 
 ---
 
-## What the solution delivers, in practice
+## The last successful run: a napkin becomes a working watsonx Orchestrate solution
 
-This is one real run, end to end: a ballpoint sketch on the left, the contract the pipeline
+Run `20260721-1759-supervisor-precos`. A ballpoint sketch on the left, the contract the pipeline
 derived from it in the middle, and the code it generated on the right.
 
-![Three panels. Panel 1, WHAT THE HUMAN MADE, source_kind napkin: a photographed ballpoint sketch of a stick figure talking to an Agente Supervisor box that contains plugin pre, LLM and plugin post; arrows fan out to two sub-agents, Agente de pesquisa de precos with the tool tool_google_search, and Agente Analista with tool_cria_tabela_comparativa and tool_gera_report_de_analise; three governance boxes sit underneath, wx gov guardrails/PII, LLM-Judge and redaction precos. The caption reads: no schema a parser can read, and half of what the code needs is not on the paper. Panel 2, THE CONTRACT BOB DERIVES, air.json: an OBSERVED section with 13 components and 9 connections each carrying evidence, showing agente_supervisor at confidence 0.99 with bbox evidence and tool_cria_tabela_comparativa with its own bbox; an INFERRED section where every guess declares its blast radius, showing a_wxo_platform made_by model with the impact "If wrong, the agent YAML format and the tool import mechanism both change"; and a MISSING section where the pipeline stopped and asked a human, showing u_protocol_agents with blocking true, the question "What protocol calls the sub-agents?" and the human answer "watsonx Orchestrate collaborator (native)", plus u_google_search_api with blocking false and a null answer, shipped open on purpose. The caption reads: overall_confidence 0.91, one blocking unknown halted the run until a person answered it, four non-blocking ones shipped open rather than guessed, and all four assumptions declare an impact. Panel 3, WHAT BOB GENERATED, watsonx Orchestrate ADK: the tree agents/supervisor-precos/ containing agents/ with agente_supervisor.yaml marked kind native, 2 tools, 2 collaborators, react, plus agente_pesquisa_precos.yaml and agente_analista.yaml; tools/ with tool_google_search.py marked @tool, tool_cria_tabela_comparativa.py, tool_gera_report.py, plugin_pre_guardrails.py marked wx.gov and plugin_post_redaction.py marked PII; tests/ with 6 modules, 17 passing, offline; a Makefile wired to the real orchestrate CLI; and requirements.txt, .env.example and README. Underneath, llm ibm/granite-3-3-8b-instruct and the import line from ibm_watsonx_orchestrate.agent_builder.tools import tool. The caption reads: flat ADK-native YAML and an instructions block that enforces the drawing's order — guardrails first, redaction last, never skip either. 17 of 17 tests pass with no credentials. Across the bottom: WHO USES IT — ANYONE WHO CAN DRAW THE IDEA, NOT JUST ANYONE WHO CAN CODE IT, and WHAT IT DELIVERS — ANY ARCHITECTURE THAT CAN BE EXECUTED](docs/images/solution-example.png)
+![Three panels. Panel 1, WHAT THE HUMAN MADE, source_kind napkin: a photographed ballpoint sketch of a stick figure talking to an Agente Supervisor box that contains plugin pre, LLM and plugin post; arrows fan out to two sub-agents, Agente de pesquisa de precos with the tool tool_google_search, and Agente Analista with tool_cria_tabela_comparativa and tool_gera_report_de_analise; three governance boxes sit underneath, wx gov guardrails/PII, LLM-Judge and redaction precos. Panel 2, THE CONTRACT BOB DERIVES, air.json: an OBSERVED section with 13 components and 9 connections each carrying evidence; an INFERRED section where every assumption declares its blast radius; and a MISSING section where the pipeline stopped and asked a human, showing u_protocol_agents with blocking true and the human answer "watsonx Orchestrate collaborator (native)". Panel 3, WHAT BOB GENERATED, watsonx Orchestrate ADK: the tree agents/supervisor-precos/ with three native agent YAMLs, five Python tools including plugin_pre_guardrails.py and plugin_post_redaction.py, six test modules 17 passing offline, a Makefile wired to the real orchestrate CLI, and requirements.txt, .env.example and README](docs/images/solution-example.png)
 
 **Panel 1 — what the human made.** A photograph of a ballpoint sketch. A stick figure, a
 supervisor box holding *plugin pre / LLM / plugin post*, two sub-agents with their tools, and
-three governance boxes underneath. There is no schema in it, nothing a parser can read, and
-roughly half of what the generated code needs is simply not on the paper. That gap is the
-entire problem, and pretending it does not exist is what produces plausible, wrong code.
+three governance boxes underneath. There is no schema in it, and roughly half of what the
+generated code needs is simply not on the paper. That gap is the entire problem.
 
-**Panel 2 — the contract Bob derives.** The same drawing as `air.json`, split into three
-categories that are never allowed to mix:
+**Panel 2 — the contract Bob derived** ([`.arch/air/20260721-1759-supervisor-precos/air.json`](.arch/air/20260721-1759-supervisor-precos/air.json)),
+split into three categories that never mix:
 
-- **Observed** — 13 components and 9 connections, each with an `evidence` object naming the
+- **Observed** — **13 components and 9 connections**, each with an `evidence` object naming the
   bounding box it was read from. `agente_supervisor` at confidence 0.99, with its box.
-- **Inferred** — what the model deduced rather than saw, each declaring its blast radius. The
-  assumption that the target platform is watsonx Orchestrate carries the impact *"If wrong, the
-  agent YAML format and the tool import mechanism both change"* — which is exactly the sentence
-  that tells a reviewer whether to care.
-- **Missing** — what nobody knows. `u_protocol_agents` was marked `blocking: true` and **stopped
-  the run** until a person answered *"What protocol calls the sub-agents?"* with *"watsonx
-  Orchestrate collaborator (native)"*. Four more unknowns were non-blocking and **shipped open
-  rather than guessed**, including which Google Search API to use.
+- **Inferred** — **4 assumptions**, each declaring its blast radius. That the target platform is
+  watsonx Orchestrate carries the impact *"If wrong, the agent YAML format and the tool import
+  mechanism both change"* — the sentence that tells a reviewer whether to care.
+- **Missing** — **5 unknowns**. `u_protocol_agents` was `blocking: true` and **stopped the run**
+  until a person answered *"What protocol calls the sub-agents?"* with *"watsonx Orchestrate
+  collaborator (native)"*. Four more were non-blocking and **shipped open rather than guessed**.
 
-`overall_confidence` is 0.91. All four assumptions declare an impact. The interesting number is
-the one blocking unknown: the pipeline's most valuable output on this run was a question.
+`overall_confidence` is **0.91**. The pipeline's most valuable output on this run was a question.
 
-**Panel 3 — what Bob generated.** A real watsonx Orchestrate ADK tree: three flat ADK-native
-agent YAMLs, five Python tools including the two governance plugins, six test modules, a
-Makefile driving the real `orchestrate` CLI, `requirements.txt`, `.env.example` and a README.
+**Panel 3 — what Bob generated**, committed at [`agents/supervisor-precos/`](agents/supervisor-precos/):
+three flat ADK-native agent YAMLs, five Python tools including the two governance plugins, six
+test modules, a Makefile driving the real `orchestrate` CLI, `requirements.txt`, `.env.example`
+and a README — **19 files**, mapped component → file in
+[`.arch/build/20260721-1759-supervisor-precos/manifest.json`](.arch/build/20260721-1759-supervisor-precos/manifest.json).
 The supervisor's `instructions` block encodes the order the human drew — guardrails first,
 redaction last, never skip either — because that order was in the drawing and therefore in the
-contract.
-
-The tree is committed at [`agents/supervisor-precos/`](agents/supervisor-precos/) and its tests
-run with no credentials and no network:
+contract. The tests run with no credentials and no network:
 
 ```bash
 cd agents/supervisor-precos && python3 -m pytest tests -q   # 17 passed
@@ -206,42 +279,40 @@ does not, and code that traces back to the box it came from.
 
 ---
 
-## Why five modes and not one prompt
+## When the gate bites: a run that was correctly BLOCKED
 
-Because a prompt cannot revoke a capability, and a file permission can.
+The counter-example matters as much as the success, because a pipeline that always generates
+code has no gate. Run `20260722-0528-modeb2`, executed end to end **through the web app**.
 
-Every mode's `edit` group carries a `fileRegex` that pins it to its own stage's artifact.
-These are the literal patterns in [`.bob/custom_modes.yaml`](.bob/custom_modes.yaml):
+Input: `exemplo-rascunho.png`, a hand-drawn sketch with five boxes and four lines — one drawn as
+a bare line labelled `?`, with no arrowhead.
 
-| Mode | `fileRegex` |
-|---|---|
-| `arch2code` | `^\.arch/run/.*\.md$` |
-| `arch-intake` | `^\.arch/intake/.*\.(json\|md)$` |
-| `arch-analyst` | `^\.arch/(air\|intake)/.*\.(json\|md\|ya?ml)$` |
-| `arch-critic` | `^\.arch/review/.*\.md$` |
-| `arch-scaffold` | `^(?!\.arch/(intake\|air\|review)/).*$` |
-| `arch-validator` | `^(tests?/\|.*[._-](test\|spec)\.\|.*\.(test\|spec)\.\|\.arch/run/.*\.md$\|docker-compose\|Makefile)` |
+| Stage | Mode | Exit | NDJSON lines | Duration |
+|---|---|---|---|---|
+| 1 intake | `arch-intake` | 0 | 1,525 | 127 s |
+| 2 analyst | `arch-analyst` | 0 | 1,084 | 114 s |
+| 3 critic | `arch-critic` | 0 | 1,309 | 111 s |
+| 4 scaffold | `arch-scaffold` | — | — | **never started** |
 
-The scaffold pattern is the interesting one: **a negative lookahead anchored at position 0.**
-It grants the whole repository *except* three directories. The mode that writes the code
-cannot edit the specification it implements, and cannot edit the review that approved it.
+Stage 1 read the trap line as a directed connection and gave it `confidence: 0.45`. Stage 2
+carried it into the AIR with `verified_by_second_pass: false`. Stage 3 issued one claim to
+`arch_vision_verify_element`:
 
-That is the barrier against spec drift, and it is the reason the pipeline is six modes rather
-than one long prompt. An agent that can rewrite its own contract will eventually do it,
-quietly, in the direction that makes its output look correct.
+> **Claim tested:** *"Is there a directed arrow (with an arrowhead) from Svc Pedidos to Notificacao?"*
+> **Verdict:** FALSE · **Confidence:** 1.0
+> **Observed:** *"There is a line connecting Svc Pedidos to Notificacao, but it is labeled with '?' and does not have a clear arrowhead."*
 
-**The honest limit of that claim:** `fileRegex` constrains the mode's **edit tools**. It does
-not constrain the `command` group, and the scaffold has `command`. A shell command can write
-anywhere the process can write, including the three protected directories. The barrier is real
-against the failure that actually happens — a model deciding the specification is wrong and
-adjusting it — and it is not a sandbox. It is stated here rather than in a footnote because a
-tool whose argument is traceability does not get to overstate its own guarantees.
+The other three connections were verified TRUE at confidence 1.0 in the same pass. The critic
+wrote `VERDICT: BLOCKED` as the last line of
+[`.arch/review/20260722-0528-modeb2/verdict.md`](.arch/review/20260722-0528-modeb2/verdict.md),
+and **the pipeline stopped before generating a single line of code.** Cost of finding out:
+**1,184,071 input tokens, 14,955 output tokens, 2.9976 Bobcoin, 336 s of stage time, 27 tool
+calls.**
 
-Two more consequences of the same table: the orchestrator has neither `command` nor `mcp`, so
-it verifies nothing on its own; and Bob raises no error for an unknown group name — a mode
-that asks for a group that does not exist silently loses that access. Bob found that defect in
-our own configuration: `arch-analyst` was told to run the AIR validator but had never been
-granted `command`. The stage would have "passed" without validating anything.
+The full run — events, timeline, gate decision — is browsable under
+[`webapp/runs/20260722-0528-modeb2/`](webapp/runs/20260722-0528-modeb2/). **The pipeline stopping
+and asking is the product working.** Guessing right would have been the worst outcome, because it
+teaches you to trust the guess.
 
 ---
 
@@ -262,124 +333,99 @@ Its whole job is to keep three categories from mixing:
 
 Migrating an item between the three in order to "complete" the AIR is prohibited in five
 separate files. This is the mechanism that turns *"the model is usually right"* from a comfort
-into a measurable risk: an inference is labelled as one, forever, in the artifact that
-generates the code.
+into a measurable risk: an inference is labelled as one, forever, in the artifact that generates
+the code.
 
-`validate_air.py --gate` applies eight automatic blocks:
-
-1. An open blocking unknown
-2. `overall_confidence` below 0.75
-3. A connection referencing a component that does not exist
-4. An assumption with no declared impact
-5. A hand-drawn connection under 0.85 confidence that was never second-passed
-6. A synchronous cycle in the connection graph
-7. No falsifiable hypothesis (*"without a hypothesis the prototype is a demo, not an experiment"*)
-8. An empty `out_of_scope`
-
-Reproduce the gate on the reference fixture, which is valid against the schema and
-deliberately blocked by exactly one gate — the missing arrow on the napkin:
+[`validate_air.py --gate`](.bob/skills/air-normalizer/scripts/validate_air.py) applies **eight
+automatic blocks**: (1) an open blocking unknown; (2) `overall_confidence` below 0.75; (3) a
+connection referencing a component that does not exist; (4) an assumption with no declared impact;
+(5) a hand-drawn connection under 0.85 confidence never second-passed; (6) a synchronous cycle in
+the connection graph; (7) no falsifiable hypothesis; (8) an empty `out_of_scope`.
 
 ```bash
 python3 .bob/skills/air-normalizer/scripts/validate_air.py \
         .bob/skills/air-normalizer/example-air.json           # exit 0 — schema and semantics
 python3 .bob/skills/air-normalizer/scripts/validate_air.py \
-        .bob/skills/air-normalizer/example-air.json --gate    # exit 1, one ERROR
+        .bob/skills/air-normalizer/example-air.json --gate    # exit 1, one ERROR — the missing arrow
 ```
 
-There is a ninth blocking condition — a `boundaries[].contains` id that is not in
-`components[]` — that is catalogued nowhere but the code. And `jsonschema` being absent
-degrades the schema layer to a warning that does not affect the exit code, which is how the
-two oldest runs in this repository passed with structurally invalid AIRs. Install it.
+`jsonschema` being absent degrades the schema layer to a warning that does not affect the exit
+code, which is how the two oldest runs in this repository passed with structurally invalid AIRs.
+Install it.
 
-**When a stage degrades instead of failing.** There is one observed failure no retry can fix:
-the Bob account budget runs out, the backend stops answering with no error and no exit, and the
-stall watchdog kills the stage. If that happens to stage 2, the run used to die holding a
-perfectly good `extraction.json`. [`webapp/app/air_fallback.py`](webapp/app/air_fallback.py)
-instead derives the part of the AIR that is a **pure transform** of what is already in hand and
-refuses to author the rest: `assumptions[]` stays `[]`, because an assumption is precisely what
-is *not* drawn; a blocking unknown states that nothing was reasoned about; and `meta.extractor`
-says in words that the analyst did not run. Verified: the result is **schema-valid (exit 0) and
-rejected by the gate (exit 1)**, and the stage stays `failed` rather than green. The mechanics
-are in [`webapp/README.md`](webapp/README.md#the-degraded-stage-2-path).
+**When a stage degrades instead of failing.** If the Bob budget runs out, the backend stops
+answering with no error and the stall watchdog kills the stage. If that hits stage 2, the run
+used to die holding a perfectly good `extraction.json`.
+[`webapp/app/air_fallback.py`](webapp/app/air_fallback.py) instead derives the part of the AIR
+that is a **pure transform** of what is in hand and refuses to author the rest: `assumptions[]`
+stays `[]`, a blocking unknown states nothing was reasoned about, and `meta.extractor` says in
+words that the analyst did not run. Verified: **schema-valid (exit 0) and rejected by the gate
+(exit 1)**. Detail in [`webapp/README.md`](webapp/README.md#the-degraded-stage-2-path).
 
 ---
 
-## The two vision passes
+## Why five modes and not one prompt
 
-This is the mechanism the whole project rests on, so here is a real run rather than a claim.
+Because a prompt cannot revoke a capability, and a file permission can.
 
-`extract` asks the model **"what do you see?"** — a framing that rewards completing the
-picture. `verify` asks **"someone may have read this wrong; does this arrow really exist?"** —
-a framing that rewards doubt. Different prompt, different framing, **decorrelated error.**
-Asking the same question twice only confirms the same bias, which is why "tell the model to
-review its own answer" pays so little.
+Every mode's `edit` group carries a `fileRegex` that pins it to its own stage's artifact. These
+are the literal patterns in [`.bob/custom_modes.yaml`](.bob/custom_modes.yaml):
 
-The critic therefore calls `arch_vision_verify_element`, never `extract` again.
+| Mode | `fileRegex` |
+|---|---|
+| `arch2code` | `^\.arch/run/.*\.md$` |
+| `arch-intake` | `^\.arch/intake/.*\.(json\|md)$` |
+| `arch-analyst` | `^\.arch/(air\|intake)/.*\.(json\|md\|ya?ml)$` |
+| `arch-critic` | `^\.arch/review/.*\.md$` |
+| `arch-scaffold` | `^(?!\.arch/(intake\|air\|review)/).*$` |
+| `arch-validator` | `^(tests?/\|.*[._-](test\|spec)\.\|\.arch/run/.*\.md$\|docker-compose\|Makefile)` |
 
-### Run `20260722-0528-modeb2`, executed end to end through the web app
+The scaffold pattern is the interesting one: **a negative lookahead anchored at position 0.** It
+grants the whole repository *except* three directories. The mode that writes the code cannot edit
+the specification it implements, and cannot edit the review that approved it. That is the barrier
+against spec drift, and it is the reason the pipeline is six modes rather than one long prompt.
 
-Input: `exemplo-rascunho.png`, a synthetic hand-drawn sketch with five boxes and four lines —
-one of which is deliberately drawn as a bare line labelled `?`, with no arrowhead.
+**The honest limit of that claim:** `fileRegex` constrains the mode's **edit tools**, not the
+`command` group, and the scaffold has `command`. A shell command can write anywhere the process
+can. The barrier is real against the failure that actually happens — a model deciding the spec is
+wrong and adjusting it — and it is not a sandbox. It is stated here rather than in a footnote
+because a tool whose argument is traceability does not get to overstate its own guarantees.
 
-| Stage | Mode | Exit | NDJSON lines | Duration |
-|---|---|---|---|---|
-| 1 intake | `arch-intake` | 0 | 1,525 | 127 s |
-| 2 analyst | `arch-analyst` | 0 | 1,084 | 114 s |
-| 3 critic | `arch-critic` | 0 | 1,309 | 111 s |
-| 4 scaffold | `arch-scaffold` | — | — | **never started** |
-
-Stage 1 read the trap line as a directed connection `svc_pedidos → notificacao` and gave it
-`confidence: 0.45`. Stage 2 carried it into the AIR with `verified_by_second_pass: false`.
-Stage 3 issued one claim to `arch_vision_verify_element`:
-
-> **Claim tested:** "Is there a directed arrow (with an arrowhead) from Svc Pedidos to Notificacao?"
->
-> **Verdict:** FALSE · **Confidence:** 1.0
-> **Observed:** *"There is a line connecting Svc Pedidos to Notificacao, but it is labeled with '?' and does not have a clear arrowhead."*
-
-The other three connections were verified TRUE at confidence 1.0 in the same pass. The critic
-wrote `VERDICT: BLOCKED` as the last line of
-`.arch/review/20260722-0528-modeb2/verdict.md`, and **the pipeline stopped before generating a
-single line of code.** The run then parked at the human gate and asked two closed questions —
-does the connection exist at all, and if so in which direction and over what protocol.
-
-Cost of finding out: **1,184,071 input tokens, 14,955 output tokens, 2.9976 Bobcoin, 336 s of
-stage time, 27 tool calls.**
-
-**The pipeline stopping and asking is the product working.** A run that goes all the way to
-code without asking anything has failed the test: guessing right is the worst possible
-outcome, because it teaches you to trust the guess.
+Two more consequences: the orchestrator has neither `command` nor `mcp`, so it verifies nothing
+on its own; and Bob raises no error for an unknown group name — a mode that asks for a group that
+does not exist silently loses that access. Bob found that defect in our own configuration:
+`arch-analyst` was told to run the AIR validator but had never been granted `command`. The stage
+would have "passed" without validating anything.
 
 ---
 
 ## Target platforms
 
-The generator does not know what watsonx Orchestrate is. It knows how to read a **profile**: a
-declarative capability contract that states what a target can express, what it refuses and
-why, which artifact each AIR component kind becomes, what it must ask the human, and what can
-be validated offline.
-
-Adding a target means adding a directory. It never means editing the engine.
+The generator does not know what watsonx Orchestrate is. It reads a **profile**: a declarative
+capability contract stating what a target can express, what it refuses and why, which artifact
+each AIR component kind becomes, what it must ask the human, and what can be validated offline.
+Adding a target means [adding a directory](.bob/skills/scaffold-from-air/profiles/). It never
+means editing the engine.
 
 | Profile | Status | Offline validation | Refuses |
 |---|---|---|---|
-| `orchestrate-adk` | verified | full | infrastructure — databases, queues and storage go behind a tool |
-| `langgraph` | documented | full | UI, brokers, schedules; a database is a checkpointer, not a node |
-| `container-microservice` | verified | full | almost nothing — the fallback when a specialised target says no |
-| `mainframe-cobol` | documented | structural-only | caches, functions, object storage, every protocol that is not a file |
-| `rpa` | documented | structural-only | infrastructure, and direct database access on principle |
+| [`orchestrate-adk`](.bob/skills/scaffold-from-air/profiles/orchestrate-adk/) | verified | full | infrastructure — databases, queues and storage go behind a tool |
+| [`langgraph`](.bob/skills/scaffold-from-air/profiles/langgraph/) | documented | full | UI, brokers, schedules; a database is a checkpointer, not a node |
+| [`crewai`](.bob/skills/scaffold-from-air/profiles/crewai/) | documented | full | same agentic family, different runtime |
+| [`container-microservice`](.bob/skills/scaffold-from-air/profiles/container-microservice/) | verified | full | almost nothing — the fallback when a specialised target says no |
+| [`mainframe-cobol`](.bob/skills/scaffold-from-air/profiles/mainframe-cobol/) | documented | structural-only | caches, functions, object storage, every protocol that is not a file |
+| [`rpa`](.bob/skills/scaffold-from-air/profiles/rpa/) | documented | structural-only | infrastructure, and direct database access on principle |
+| [`llm-finetuning`](.bob/skills/scaffold-from-air/profiles/llm-finetuning/) | documented | structural-only | anything that is not a data/eval pipeline |
 
-`status` is a claim about the artifact contract; `validation` is a claim about what can be
-proven with no platform attached. They are different claims and both are shown.
-`orchestrate-adk` is `verified` because its field lists were read by introspection out of an
-installed `ibm-watsonx-orchestrate 2.12.0`, not transcribed from documentation — every
-statement in a profile is tagged `[VER]`, `[DOC]`, `[INF]` or `[NV]`.
+`status` is a claim about the artifact contract; `validation` is a claim about what can be proven
+with no platform attached. `orchestrate-adk` is `verified` because its field lists were read by
+introspection out of an installed `ibm-watsonx-orchestrate 2.12.0`, not transcribed from docs —
+every statement in a profile is tagged `[VER]`, `[DOC]`, `[INF]` or `[NV]`.
 
-Before any code is generated, `negotiate` intersects the drawing with the target and returns
-one of four verdicts: **REFUSAL** (with the redraw that would work), **QUESTION**,
-**DOWNGRADE** (it will be generated, but part of the intent becomes documentation), or
-**RESOLVED**. There is deliberately no fifth verdict for *"generate something plausible"* —
-that is the only one that produces code which looks right and is wrong.
+Before any code is generated, `negotiate` intersects the drawing with the target and returns one
+of four verdicts: **REFUSAL** (with the redraw that would work), **QUESTION**, **DOWNGRADE** (it
+will be generated, but part of the intent becomes documentation), or **RESOLVED**. There is
+deliberately no fifth verdict for *"generate something plausible"*.
 
 ```bash
 S=.bob/skills/scaffold-from-air/scripts
@@ -388,40 +434,48 @@ python3 $S/target_engine.py doctor                              # what THIS mach
 python3 $S/target_engine.py negotiate <air.json> --profile rpa  # refuse before spending a token
 ```
 
-This exists because the first generation of ADK templates in this repository was wrong in a
-way nobody caught until import time: they emitted `apiVersion` / `metadata` / `spec`, the
-Kubernetes shape, because the generator had no declared contract and reached for the most
-familiar YAML it knew. An engine with no declared capabilities does not make that mistake once
-— it makes it in five platforms instead of one.
-
 ---
 
-## Seeing it run
+## ROI and business outcomes
 
-The web application is the second front door onto the same pipeline: it drives the same Bob
-modes as subprocesses, streams what the model is doing while it does it, stops at the human
-gate, and hands back the artifacts. Two screens are worth showing here.
+The task arch2code addresses is the routine, repeated one at the front of every solution
+engagement: **turn an approved architecture drawing into a working solution someone can run.**
 
-![The execution screen at the stage-3 gate: the run bar shows 20260722-0528-modeb2 with meters reading 1,199,026 tokens, cost 3, 5m 54s elapsed and 27 tool calls; the headline reads "The critic blocked this architecture" with a VERDICT: BLOCKED chip; the left column lists the contested findings ranked CRITICAL, HIGH and MEDIUM, each naming the element id and the required fix, followed by the executive summary and the critic's blocking questions rendered verbatim; the right column is a decision panel with approve, block and send-back options and a reason field](docs/images/ui-02-execution.png)
+| | Before Bob | With Bob |
+|---|---|---|
+| Hands-on effort per solution | **~200 h** (≈5 weeks of one engineer) | **~8 h** |
+| Of which, human *thinking* | most of it | **4.25 h** — deciding, not transcribing |
+| Reduction | — | **~96 %** |
 
-**The gate is a place, not a policy.** That is the run described above, meter for meter. On the
-left of the workspace, your drawing with the bounding boxes the model drew on it — the answer
-to *did it actually read my diagram?* On the right, every tool call as a collapsible block with
-its parameters, its result, its duration and its token cost. When the critic blocks, the
-findings are ranked and each one names the element id it is about, so the human decides against
-specifics. Approving against a `BLOCKED` verdict is allowed and recorded: the reason field is
-*optional when you agree with the verdict, mandatory when you do not*.
+**How the 8 hours break down** (machine time is minutes; the rest is a human): capture the
+drawing 0.25 h · intake 0.5 h · **answer the blocking unknowns 2.0 h** · read the verdict and
+decide the gate 0.5 h · scaffold 1.5 h · run the experiment 1.0 h · **review the artifacts
+2.25 h**.
 
-![The deliverables screen: three download cards — "The whole solution" (9 files, 522 KB), "Just the code", and "The whole project tree" (12 files, 998 KB) — where the code card carries an amber notice reading "This run generated no code to download" and explains why; below them a file tree on the left and the selected artifact, capture-manifest.json, rendered with syntax highlighting on the right showing run id, source sha256, source kind, extraction path and the normalization from 2372×1107 to 1568×732](docs/images/ui-03-deliverables.png)
+**How the 200-hour baseline was derived.** It is our own measured effort for a solution the size
+of the ones in this repository — a supervisor plus two or three collaborator agents, five tools,
+governance and redaction plugins, a test suite, a Makefile and a README — once
+architecture-review cycles, rework from a misread diagram, and documentation are counted. 200 h
+was chosen from a range of 80–320 h as the figure matching our actual experience.
 
-**A download never implies work that was not done.** The run shown here stopped before
-generation, so the code archive says exactly that, in words, with the reason, instead of
-handing over an empty zip. Every artifact is browsable in place first — the pane on the right
-is `capture-manifest.json`, the record of what was captured, its sha256, and exactly how the
-image was rescaled before any model saw it.
+**Scaled out**, at roughly one solution per week and a US$100/h fully-loaded cost:
 
-Screen-by-screen detail, the accepted formats, the HTTP surface, every environment variable and
-a symptom → cause → fix table live in **[`webapp/README.md`](webapp/README.md)**.
+| Task (same pipeline, different moment) | Before | After | Per year | Saved / yr |
+|---|---|---|---|---|
+| **Solution build** — drawing → running solution | 200 h | 8 h | 48 | **9,216 h** |
+| Re-sync after the client changes the diagram | 40 h | 4 h | 24 | 864 h |
+| Handover / audit — "where did this file come from?" | 3 h | 0.1 h | 48 | 139 h |
+| Proposal / SOW technical annex *(estimate)* | 12 h | 0.5 h | 24 | 276 h |
+| **Per team, per year** | | | | **≈10,500 h ≈ US$1.05M** |
+
+**Beyond the hours:** deal velocity (the client's own diagram runs the same week it was drawn,
+before a build team is staffed); the technical annex writes itself as a pipeline by-product;
+provenance that answers *which model read the drawing, when, at what confidence* is an audit
+answer, not an archaeology project; and the pipeline is a folder in Git, so **the tenth team to
+adopt it costs what the first did.**
+
+> These are estimates against our own baseline, not an instrumented measurement of this
+> repository. They are stated that way everywhere they appear.
 
 ---
 
@@ -431,37 +485,15 @@ Everything in this section was executed. Reproduce any line of it.
 
 | Claim | Evidence |
 |---|---|
-| The harness is internally consistent | `bash tests/smoke_test.sh` → **21 passed, 0 failed**, on an interpreter with `jsonschema`, `mcp` and `httpx`. The stock macOS `python3` scores 19/20 and names `jsonschema` as the failure |
-| The web app behaves as documented | `cd webapp && python -m pytest tests -q` → **313 tests**, no network, no credentials |
-| The five platform profiles load, refuse and validate what they claim | `python3 .bob/skills/scaffold-from-air/scripts/selftest.py` → **35 passed, 0 failed** |
-| The gate bites on a real run | run `20260722-0528-modeb2`: three stages exit 0, `VERDICT: BLOCKED`, stage 4 never started. Artifacts under `.arch/{intake,air,review}/20260722-0528-modeb2/` |
+| The harness is internally consistent | `bash tests/smoke_test.sh` → **21 passed**, on an interpreter with `jsonschema`, `mcp`, `httpx` |
+| The web app behaves as documented | `cd webapp && python -m pytest tests -q` → **350 tests**, no network, no credentials |
+| The platform profiles load, refuse and validate what they claim | `python3 .bob/skills/scaffold-from-air/scripts/selftest.py` |
+| The gate bites on a real run | run `20260722-0528-modeb2`: three stages exit 0, `VERDICT: BLOCKED`, stage 4 never started. Artifacts under [`.arch/{intake,air,review}/20260722-0528-modeb2/`](.arch/review/20260722-0528-modeb2/) |
 | Second-pass verification contradicts the extraction when it should | same run: verdict FALSE at confidence 1.0 on the one connection that was not an arrow |
-| Cost of that run | 1,184,071 in / 14,955 out tokens · 2.9976 coins · 336 s · 27 tool calls |
-| The generated solution in the example above runs | `cd agents/supervisor-precos && python3 -m pytest tests -q` → **17 passed**, offline, no credentials |
-| The contract behind that example says what the panel says | `.arch/air/20260721-1759-supervisor-precos/air.json`: 13 components, 9 connections, 4 assumptions, `overall_confidence` 0.91, one blocking unknown answered by a human, four non-blocking unknowns left open |
-| The degraded AIR is honest by construction | the fallback output is schema-valid (exit 0) and **rejected** by `validate_air.py --gate` (exit 1), with `assumptions[] == []` |
-| Observations carry evidence | 3 of the 5 AIRs on disk were produced against the current schema; in those three, **42 of 42** components and connections carry an `evidence` object |
-| Inferences declare their blast radius | **22 of 22** assumptions across all five AIRs carry a non-empty `impact` |
-| Generated files are traceable to components | `.arch/build/20250717-1200-investment-advisor/manifest.json` maps component id → files → bbox evidence; **10 of 10** paths resolve on disk |
-| The pipeline runs unattended | Bob driven headless as `bob --chat-mode <slug> --output-format stream-json`, one subprocess per stage, NDJSON parsed into a live timeline |
-
-### What has *not* been verified
-
-- **Stage 5 has never completed.** `.arch/run/` holds no `validation.md`. The mode, the
-  harness script and falsifiable hypotheses exist; no run has produced a report.
-- **Stage 4 has not been run through the web app.** The `.arch/build/` directories were
-  produced from the Bob IDE. The only browser-driven pipeline run so far is the one that was
-  blocked at stage 3 — which is a fair test of the gate and no test at all of the scaffold.
-- **The generated Orchestrate artifacts have never been imported into a live tenant.** ADK
-  2.12.0 has no `--dry-run`, so offline validation is pydantic-level only.
-- **How Bob applies `fileRegex`** — engine, path form, normalisation. See the caveat above.
-- **The `command` group bypasses the write scope.** Known, unmitigated inside Bob.
-- **The two oldest runs** (`20260716-1548-uci`, `20260721-1129-atendente`) predate the current
-  schema, carry no `evidence` anywhere, and fail `validate_air.py --gate`. They are kept as the
-  baseline to beat. [`.arch/README.md`](.arch/README.md) catalogues every defect in them, in
-  detail, rather than deleting them.
-- **The time-saving figures** in the submission are an estimate against our own baseline, not
-  an instrumented measurement.
+| The generated solution runs | `cd agents/supervisor-precos && python3 -m pytest tests -q` → **17 passed**, offline |
+| The contract behind it says what the panel says | [`.arch/air/20260721-1759-supervisor-precos/air.json`](.arch/air/20260721-1759-supervisor-precos/air.json): 13 components, 9 connections, 4 assumptions, `overall_confidence` 0.91, one blocking unknown answered |
+| Generated files are traceable to components | [`.arch/build/20250717-1200-investment-advisor/manifest.json`](.arch/build/20250717-1200-investment-advisor/manifest.json) maps component id → files → bbox evidence |
+| The pipeline runs unattended | Bob driven headless as `bob --chat-mode <slug> --output-format stream-json`, one subprocess per stage |
 
 ---
 
@@ -470,7 +502,7 @@ Everything in this section was executed. Reproduce any line of it.
 ### The web application, locally
 
 ```bash
-git clone <this repo> && cd watsonx-challenge-2026
+git clone https://github.com/ce-bsb/arch2code && cd arch2code
 
 python3 -m venv .venv && source .venv/bin/activate    # Python 3.10 or newer
 pip install -r webapp/requirements.txt
@@ -484,10 +516,10 @@ the exact `pip` line. It binds to loopback and pins one worker, deliberately.
 
 Two of the four prerequisites are optional: the `bob` CLI is needed only to drive the pipeline,
 and watsonx.ai credentials only for the vision path — `.drawio`, `.puml` and `.mmd` run
-deterministically with neither. The app probes its own environment at startup and **never
-refuses to start**; it names the failing check instead, and enables reading a drawing and
-running the pipeline independently. Full prerequisite table, every environment variable and a
-symptom → cause → fix table: [`webapp/README.md`](webapp/README.md).
+deterministically with neither. The app probes its own environment at startup and **never refuses
+to start**; it names the failing check instead. Full prerequisite table, every environment
+variable and a symptom → cause → fix table: [`webapp/README.md`](webapp/README.md).
+
 
 ### From inside the Bob IDE
 
@@ -497,20 +529,7 @@ cp ~/Desktop/whiteboard.jpg .arch/intake/inbox/
 ```
 
 Then select **🔀 arch2code — Orchestrator** and tell it which artifact to process. Full
-step-by-step with its own symptom → cause → fix table:
-[`INSTALL-GUIDE.md`](INSTALL-GUIDE.md).
-
-### Verifying the MCP vision path on your own account
-
-```bash
-python3 mcp/arch_vision/preflight.py            # 6 gates: credentials, scope, IAM, catalog, model, images
-python3 mcp/arch_vision/preflight.py --probe    # which catalogued models actually accept an image
-python3 mcp/arch_vision/preflight.py --extract  # run the fixture against tests/ground-truth-example.json
-```
-
-`--extract` is the only test that answers *does vision work in MY catalog*. It scores the
-extraction against a ground truth that includes the trap line: asserting a direction on the
-line with no arrowhead is a critical failure, not a warning.
+step-by-step with its own symptom → cause → fix table: [`INSTALL-GUIDE.md`](INSTALL-GUIDE.md).
 
 ---
 
@@ -525,7 +544,7 @@ line with no arrowhead is a critical failure, not a warning.
     diagram-intake/                     EXIF-correct capture, .drawio base64+deflate parser
     air-normalizer/                     air.schema.json + validate_air.py + the blocked fixture
     scaffold-from-air/
-      profiles/                         the 5 platform contracts — add a directory, not code
+      profiles/                         7 platform contracts — add a directory, not code
       scripts/                          negotiate, target_engine, validate_adk, selftest
     experiment-harness/                 stage 5: run it, report what was refuted
   mcp.json                              arch_vision registration — no credentials, no absolute paths
@@ -539,7 +558,9 @@ mcp/arch_vision/                        the MCP server: 4 tools over stdio to wa
 webapp/                                 the abstraction layer — FastAPI + hand-written ES modules
   app/                                  see webapp/README.md for the module map
   static/                               no build step, no CDN, no bundler
-  tests/                                313 tests, no network
+  tests/                                350 tests, no network
+
+deploy/                                 IBM Code Engine: Dockerfile, deploy.sh, DEPLOYMENT.md
 
 tests/smoke_test.sh                     21 checks that must be green before opening Bob
 tests/ground-truth-example.json         what the fixture really contains, including the trap
@@ -549,14 +570,12 @@ tests/ground-truth-example.json         what the fixture really contains, includ
   README.md                             what each historical run did, and every defect in it
 
 agents/                                 generated solutions, checked in as evidence
-  supervisor-precos/                    the tree in the example above — 17 tests, offline
-  investment-advisor/                   generated from a whiteboard photo, with its manifest
+  supervisor-precos/                    the successful run above — 17 tests pass, offline
+  investment-advisor/                   a second example, with its manifest (tests partial)
 
 docs/images/                            architecture.svg, solution-example.png, the screenshots
+docs/videos/                            the landing-page demo
 INSTALL-GUIDE.md                        8 ordered steps, each isolating one class of failure
 AGENTS.md                               the short contract for any agent working in this repo
 ```
 
-Application code is the *output* of this repository, not its content. What is committed here
-is the configuration that produces it — which is why the tenth team to adopt it costs the same
-as the first.

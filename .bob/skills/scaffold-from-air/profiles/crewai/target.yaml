@@ -1,0 +1,458 @@
+# =============================================================================
+# crewai — CrewAI application (Crew of role-based agents with tasks)
+# =============================================================================
+# CrewAI models a solution as a CREW: role-playing agents, each with a goal and a
+# backstory, wired to tasks and tools, run under a process (sequential or
+# hierarchical). The mapping mistake that turns a correct drawing wrong is
+# treating a supervisor as just another peer agent instead of the manager of a
+# hierarchical process — so that distinction is declared here, not left to the
+# scaffold model's judgement.
+#
+# HONESTY NOTE: crewai is NOT installed on this machine. Every framework shape
+# below is [DOC] (from CrewAI documentation) or [NV] (not verified against a real
+# import); every AIR->crew mapping is [INF] (a design decision of this profile).
+# Nothing here is [VER]. Re-run scripts against an installed crewai and re-mark
+# the shapes [VER] before claiming status: verified.
+# =============================================================================
+
+id: crewai
+name: "CrewAI — role-based multi-agent crew"
+version: 2
+extends: null
+status: documented
+
+summary: >
+  Generates a CrewAI application: one Agent per agent component (role/goal/
+  backstory), one Task per unit of work, tools as BaseTool subclasses, and a Crew
+  that assembles them under a process. A supervisor agent becomes the manager of
+  a hierarchical process, not a peer — the single mapping that decides whether
+  delegation actually happens. Pre/post guardrails become step callbacks, an
+  LLM-Judge becomes an eval, a multi-LLM gateway becomes an llm/router, and
+  governance stays a loud placeholder rather than an invented endpoint.
+
+provenance:
+  - "[DOC] CrewAI concepts — Agent(role/goal/backstory/tools/llm/allow_delegation), Task(description/expected_output/agent/guardrail/callback), Crew(agents/tasks/process/manager_llm/manager_agent/step_callback/task_callback), Process.sequential|hierarchical, BaseTool subclass with _run, and the @tool decorator — taken from the CrewAI documentation, not transcribed from an installed package."
+  - "[DOC] CrewAI wraps LiteLLM: crewai.LLM(model='<provider>/<model>') routes through litellm, so the architectural default groq/openai/gpt-oss-120b is expressed as LLM(model='groq/openai/gpt-oss-120b') and needs GROQ_API_KEY in the environment."
+  - "[DOC] Knowledge sources live under crewai.knowledge.source.* (StringKnowledgeSource, TextFileKnowledgeSource, PDFKnowledgeSource) and attach to an Agent or Crew via knowledge_sources=[...]."
+  - "[NV] crewai is NOT installed on this machine. No import, no kickoff and no litellm/langfuse call was executed. Class names, constructor keywords and callback signatures are documentation-level claims that a version bump can silently break."
+  - "[INF] The AIR-to-crew mapping (agent -> Agent, service acting as agent -> Agent, supervisor -> hierarchical manager, connection -> task ordering / delegation, tool -> BaseTool, knowledge_base -> knowledge source, plugin pre/post -> step/task callbacks, LLM-Judge -> eval, multi-LLM gateway -> llm/router, guardrails/governance -> a placeholder monitor) is a design decision of this profile, not a framework rule."
+
+# -----------------------------------------------------------------------------
+capabilities:
+
+  component_kinds:
+    supports: [agent, tool, knowledge_base, service, function, external, actor]
+    excludes:
+      - feature: ui
+        reason: "A crew has no front end. Whatever kicks off the crew is the entrypoint and lives outside the generated application."
+        workaround: "Mark it kind: actor if it is the human, or drop it and let your existing caller invoke the crew."
+      - feature: gateway
+        reason: "Routing between agents is what a hierarchical manager or an agent's allow_delegation does; a routing gateway drawn as its own box competes with the manager for the same decision. A gateway drawn in front of the LLMs is a different thing — that is the multi-LLM router, generated as llm/router.py, not a crew component."
+        workaround: "Redraw an agent-routing gateway as the manager agent of a hierarchical crew; keep an LLM-fanout gateway as the model-router note it already is."
+      - feature: database
+        reason: "CrewAI runs agents, not databases. There is nowhere in a crew, agent or task to put a schema or a connection pool."
+        workaround: "Draw the database behind a service and let that service become a tool the agent calls."
+      - feature: cache
+        reason: "Caching is an implementation detail of whatever sits behind a tool; the crew gives an agent no cache to configure."
+        workaround: "Put it inside the service that becomes the tool."
+      - feature: queue
+        reason: "A crew does not consume from a broker; a task that blocks on a queue never returns and the run never ends."
+        workaround: "Keep the consumer outside and invoke the crew per message."
+      - feature: topic
+        reason: "Same as queue: nothing in the crew subscribes."
+        workaround: "Invoke the crew from your existing subscriber."
+      - feature: job
+        reason: "A crew is invoked, it does not schedule itself. There is no cron or batch artifact in a Crew definition, and inventing one is exactly the kind of plausible-but-wrong output this profile refuses."
+        workaround: "Let your existing scheduler call `crewai run` (or crew.kickoff()) on a schedule; the crew is the unit of work, not the timer."
+      - feature: storage
+        reason: "Object storage is not a crew concept; it is something a tool's code happens to use."
+        workaround: "Draw it as external and let the tool that needs it hold the client."
+
+  protocols:
+    supports: [internal, http, https, sql, file, external_chat]
+    excludes:
+      - feature: mqtt
+        reason: "No native adapter, and a subscription cannot live inside a task run."
+        workaround: "Consume outside and invoke the crew per message."
+      - feature: amqp
+        reason: "Same as mqtt — no adapter, and a blocking consume breaks the run."
+      - feature: kafka
+        reason: "A consumer group cannot be held across a crew invocation."
+        workaround: "Consume outside and invoke the crew per record."
+      - feature: grpc
+        reason: "Supported by whatever client you write inside a tool, but nothing in the crew contract expresses it, so this profile will not pretend to generate the stubs."
+        workaround: "Front the gRPC service with an HTTP endpoint the tool calls."
+      - feature: graphql
+        reason: "No native GraphQL tool kind; a hand-rolled client would put query construction in model output, which is a prompt-injection path into your data."
+        workaround: "Expose the specific queries you need as REST endpoints and let a BaseTool call them."
+      - feature: jdbc
+        reason: "Agents do not hold database connections; a tool that opens one leaks credentials into the agent's execution context, and SQL built from model output is an injection path."
+        workaround: "Put named, parameterised operations behind an HTTP endpoint and give the crew a tool that calls the operation, never one that builds SQL."
+      - feature: s3
+        reason: "Object storage access is not part of a tool's contract; it is opaque client code the crew never sees."
+        workaround: "Serve the object through an HTTP endpoint the tool fetches, or index it as a knowledge source."
+      - feature: websocket
+        reason: "Streaming out of a crew is done with the framework's own callbacks, not with a socket declared as a connection."
+        workaround: "Use step_callback / task_callback for progress, and poll over HTTP for inbound streams."
+
+  sync_modes:
+    supports: [sync, async]
+    excludes: []
+
+  boundary_kinds:
+    supports: [logical, namespace]
+    excludes:
+      - feature: vpc
+        reason: "Network topology has no representation in a crew definition."
+        workaround: "Keep it in the architecture document; a private endpoint becomes a tool with credentials from the environment."
+      - feature: zone
+        reason: "Placement is a deployment concern, not a crew concern."
+      - feature: cluster
+        reason: "Where the process runs is not expressible in the crew."
+      - feature: onprem
+        reason: "Deployment concern, not a crew concern."
+        workaround: "Draw the on-prem system as kind: external; the tool that calls it holds the client."
+      - feature: cloud
+        reason: "Same as onprem — placement is not part of a crew."
+      - feature: dmz
+        reason: "Network zoning is not part of a crew."
+      - feature: account
+        reason: "Tenancy is a deployment concern."
+      - feature: external_system
+        reason: "Everything outside the crew becomes a client inside a tool, not a sub-crew."
+        workaround: "Keep it as documentation; it produces no crew structure, only the tool that talks to it."
+
+  nonfunctional_honored: [latency, retention]
+
+# -----------------------------------------------------------------------------
+# kind -> artifact. schema_facts is the contract the template may rely on;
+# must_not is the list of ways this exact artifact has already been got wrong.
+artifacts:
+
+  - for_kind: agent
+    path: "src/agents/{id}.py"
+    format: python
+    template: templates/agent.py
+    evidence: "[DOC] crewai.Agent is constructed with role, goal and backstory, plus optional tools, llm and allow_delegation."
+    schema_facts:
+      - "from crewai import Agent, LLM. An Agent needs role, goal and backstory; the backstory is what shapes how it reasons, not decoration."
+      - "The agent's builder FUNCTION and variable name are the AIR component id, so traceability from crew to drawing is 1:1. Return the Agent from a build_{id}() function so crew.py imports it by id."
+      - "llm is a crewai.LLM(model=...). ARCHITECTURAL DEFAULT for every generated agent: groq/openai/gpt-oss-120b, written as LLM(model='groq/openai/gpt-oss-120b'). When a multi-LLM gateway/router is drawn, take the llm from llm/router.py get_llm() instead of hardcoding one here."
+      - "A supervisor/orchestrator agent sets allow_delegation=True and becomes the manager in a hierarchical Crew (manager_agent=...), not a peer in a sequential one. A specialist sets allow_delegation=False."
+      - "tools is a flat list of BaseTool instances imported from src/tools/. knowledge_sources is a flat list imported from src/knowledge/."
+      - "DIAGRAM MAPPING (SME corrections): a box the vision extractor labelled kind:service but named/typed as an agent is an Agent here, NOT a tool stub. A 'supervisor'/'manager'/'orchestrator' box -> allow_delegation=True + manager of a hierarchical crew. An 'LLM' box inside an agent -> that agent's llm=LLM(...) (or get_llm() when a router is drawn), not a separate component. A 'guardrails/PII' box -> a step_callback wired in crew.py plus the governance placeholder, never a fake pass-through. An 'LLM-Judge' box -> the eval model in eval/ragas or an eval script, not a runtime agent."
+    must_not:
+      - "Never model a supervisor as one more sequential agent. That drops the delegation the drawing shows and produces a crew that runs and does not collaborate."
+      - "Never omit backstory. An agent with no backstory ignores its role."
+      - "Never hardcode an API key in the LLM(...) call. The key comes from the environment (GROQ_API_KEY etc.), read by litellm, never a literal."
+      - "Never emit a guardrails or LLM-Judge box as an Agent. Guardrails are callbacks + the governance placeholder; an LLM-Judge is an eval-time construct."
+
+  - for_kind: service
+    path: "src/agents/{id}.py"
+    format: python
+    template: templates/agent.py
+    evidence: "[INF] Profile mapping decision: a service that acts as an agent in an agentic drawing is an Agent."
+    schema_facts:
+      - "CLASSIFY FIRST. The vision extractor labels agents, guardrail boxes and routers as kind:service. Before treating a service as an Agent, check its name/role: a guardrail/PII box is a callback (guardrails_pre.py / redaction_post.py), a multi-LLM gateway is llm/router.py, an LLM-Judge is an eval. Only a service that genuinely reasons and acts becomes an Agent."
+      - "Same Agent shape as kind: agent. Use this when the extractor labelled an agent as a plain service (the common case from vision)."
+    must_not:
+      - "Never emit a guardrail/router/judge box as an Agent just because the extractor typed it kind:service — that is how an agentic drawing degrades into generic peers and the delegation and safety intent are lost."
+
+  - for_kind: function
+    path: "src/tools/{id}.py"
+    format: python
+    template: templates/tool.py
+    evidence: "[INF] Same rationale as a tool: a function in the drawing is a single callable the agent invokes, which is exactly a BaseTool."
+
+  - for_kind: tool
+    path: "src/tools/{id}.py"
+    format: python
+    template: templates/tool.py
+    evidence: "[DOC] A crewai tool is a BaseTool subclass with name, description and _run, or a @tool-decorated function."
+    schema_facts:
+      - "from crewai.tools import BaseTool (subclass) or `tool` (decorator). Subclass sets name: str, description: str, an args_schema (a pydantic BaseModel), and def _run(self, ...) -> str."
+      - "The description is what the agent reads to decide whether to call the tool; it is the interface, not a comment. Every argument is typed via the args_schema."
+      - "_run returns a string the agent reads back. Credentials come from the environment (os.getenv), never a literal in the file."
+      - "One tool class per OPERATION the drawing names, not one per system: an agent picks a tool by name+description, so search_orders and cancel_order beat one order_api(action)."
+    must_not:
+      - "Never give a tool a side effect the description does not state. The agent chooses tools by description alone."
+      - "Never hardcode a key, token or URL secret. Read them from the environment; a missing one raises loudly."
+      - "Never leave a `pass`/stub body that returns a plausible fake. An unimplemented tool raises NotImplementedError naming the AIR id and the missing contract."
+
+  - for_kind: external
+    path: "src/tools/{id}_client.py"
+    format: python
+    template: templates/external_client.py
+    evidence: "[INF] An external system the crew talks to becomes a BaseTool holding the client; the crew never sees a sub-crew, only the tool."
+    schema_facts:
+      - "One BaseTool per operation the drawing names against the external system, with the base URL and credentials read from the environment."
+    must_not:
+      - "Never invent the external system's endpoints, paths or payload shapes. An unknown endpoint is a NotImplementedError naming the AIR id, not a plausible URL."
+
+  - for_kind: knowledge_base
+    path: "src/knowledge/{id}.py"
+    format: python
+    template: templates/knowledge.py
+    evidence: "[DOC] Knowledge sources under crewai.knowledge.source.* attach to an Agent or Crew as knowledge_sources=[...]."
+    schema_facts:
+      - "A knowledge base becomes a knowledge source (StringKnowledgeSource / TextFileKnowledgeSource / PDFKnowledgeSource), wired to the agent or crew via knowledge_sources, not an agent of its own."
+      - "Return the built source from a build_{id}() function so crew.py / agents can import it by id. The source's content/paths come from the drawing's document list, never invented text."
+    must_not:
+      - "Never ship a knowledge source with invented content. If the documents are unknown, raise/parameterise the path, do not fabricate the corpus — an agent that retrieves fabricated facts is worse than one with no knowledge base."
+      - "Never model a knowledge base as an Agent or a Tool. It is a passive retrieval source attached to one."
+
+  # --- project-level artifacts: the crew, its wiring, and the SME layer ------ #
+
+  - for_kind: project
+    path: "src/crew.py"
+    format: python
+    template: templates/crew.py
+    evidence: "[DOC] The Crew assembles agents and tasks under a process (Process.sequential or Process.hierarchical) and is the single entrypoint."
+    schema_facts:
+      - "from crewai import Crew, Process. Crew(agents=[...], tasks=[...], process=Process.sequential|hierarchical)."
+      - "SUPERVISOR MAPPING: a hierarchical crew needs a manager — either manager_agent=<the supervisor Agent> or manager_llm=LLM(...). The supervisor from the drawing goes here as manager_agent, NOT into the agents=[] worker list."
+      - "Task ordering encodes the connections between agents: in a sequential crew the tasks list order is the pipeline; in a hierarchical crew the manager decides order from the tasks and agents available."
+      - "PLUGIN PRE/POST MAPPING: a 'plugin pre'/'guardrails' box wires as step_callback=guardrails_pre (imported from src/guardrails_pre.py), running on every agent step before the result is accepted; a 'plugin post'/'redaction' box wires as task_callback=redaction_post (imported from src/redaction_post.py), running after each task output. These are the crew's pre/post hooks — not tools, not agents."
+      - "OBSERVABILITY: when a langfuse/observability box is drawn, call setup_tracing() from src/observability/langfuse_tracing.py before kickoff so litellm emits traces."
+    must_not:
+      - "Never build a hierarchical crew without a manager. Crew(process=Process.hierarchical) with no manager_agent and no manager_llm raises at kickoff."
+      - "Never put the supervisor into agents=[] as a peer AND as the manager — a manager_agent must not also be a worker in the same crew."
+      - "Never invent an agent, task, tool or knowledge source that is not in the AIR."
+
+  - for_kind: project
+    path: "src/tasks.py"
+    format: python
+    template: templates/tasks.py
+    evidence: "[DOC] crewai.Task(description, expected_output, agent). One task per unit of work the crew performs."
+    schema_facts:
+      - "from crewai import Task. Each Task carries description (what to do), expected_output (the concrete artifact it must produce) and agent (the Agent that owns it)."
+      - "expected_output is what the agent aims at; it comes from the drawing's responsibilities/outputs, and a vague one produces vague work."
+      - "context=[other_task, ...] passes an upstream task's output into a downstream task — this is where connections between agents become data flow."
+      - "A per-task guardrail (guardrail=<callable>) can validate/transform a single task's output; use it for the redaction/validation the drawing scopes to one step, and the crew-wide task_callback for the rest."
+    must_not:
+      - "Never invent tasks the drawing does not show, and never leave expected_output empty — an empty target is why a crew 'runs but does nothing useful'."
+
+  - for_kind: project
+    path: "src/guardrails_pre.py"
+    format: python
+    template: templates/guardrails_pre.py
+    evidence: "[INF] A 'plugin pre'/'guardrails'/'PII' box maps to a crew step_callback that inspects each agent step BEFORE the output is accepted — the pre-LLM/pre-step hook CrewAI exposes."
+    schema_facts:
+      - "step_callback receives each agent step (an action/observation object). This is the pre-hook: validate input, enforce a policy, or delegate the real check to governance/openscale_monitor.py."
+      - "Emit ONLY when the drawing shows a pre-guardrail / input-validation / PII box. Without one it is noise."
+    must_not:
+      - "Never fake a guardrail that always passes. Where the real check needs a governance service the drawing only named, call the placeholder in governance/ and raise NotImplementedError naming the AIR id and the missing endpoint."
+
+  - for_kind: project
+    path: "src/redaction_post.py"
+    format: python
+    template: templates/redaction_post.py
+    evidence: "[INF] A 'plugin post'/'redaction' box maps to a crew task_callback (or a per-task guardrail) that reshapes/redacts output AFTER the model produced it — the post hook."
+    schema_facts:
+      - "task_callback receives each TaskOutput after a task finishes; this is the post-hook where redaction/reshaping belongs. A tighter, single-task version is a Task(guardrail=...) callable returning (ok, value)."
+      - "Emit ONLY when the drawing shows a post-guardrail / redaction / output-filter box."
+    must_not:
+      - "Never silently swallow a violation. Redact loudly (log what was redacted) or block; a post-hook that hides a failure hides the incident."
+
+  - for_kind: project
+    path: "src/llm/router.py"
+    format: python
+    template: templates/llm_router.py
+    evidence: "[INF] The 'API gateway for multiple LLMs' — a box in front of the models — maps to an llm router that fails over across crewai.LLM instances, not to a crew component."
+    schema_facts:
+      - "Emit when the drawing shows a gateway/router in front of the LLMs, more than one LLM, or a primary+backup. get_llm() returns a crewai.LLM; the FIRST/primary is the architectural default groq/openai/gpt-oss-120b, with the drawing's backups tried on failure."
+      - "Fallback is expressed over crewai.LLM(model=...) instances (each wrapping litellm); the router tries them in order. Agents call get_llm() instead of constructing an LLM inline."
+    must_not:
+      - "Never model the LLM router as a separate crew Agent or Tool the agents call. It is infrastructure the agents' llm= points at, not a peer in the crew."
+      - "Never hardcode provider keys in the router; each LLM reads its key from the environment via litellm."
+
+  - for_kind: project
+    path: "src/observability/langfuse_tracing.py"
+    format: python
+    template: templates/langfuse_tracing.py
+    evidence: "[DOC] CrewAI runs on LiteLLM, and LiteLLM emits Langfuse traces when langfuse is registered as a callback and the LANGFUSE_* env vars are set."
+    schema_facts:
+      - "setup_tracing() registers langfuse as a litellm callback and reads LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY / LANGFUSE_HOST from the environment — NAMES only, never values in code. Call it before crew.kickoff()."
+      - "Emit when the drawing shows an observability / tracing / langfuse box. It ties evaluation runs and production traces to the same place."
+    must_not:
+      - "Never write a Langfuse key into the file. The keys are environment-only; committing one leaks it."
+
+  - for_kind: project
+    path: "eval/ragas/evaluate_rag.py"
+    format: python
+    template: templates/ragas_evaluate.py
+    evidence: "[DOC] RAGAS scores retrieval quality (faithfulness, relevancy, context precision/recall) that a crew run does not. The drawing's 'LLM-Judge' over a RAG path maps here, not to a runtime agent."
+    schema_facts:
+      - "Emit ONLY when the drawing has a knowledge base / retrieval step. Build samples of {question, answer, contexts, ground_truth} from the crew's traces; an empty RAGAS run proves nothing."
+      - "An 'LLM-Judge' box is an eval-time construct: the judge model scores outputs here (or in a plain eval script), it is NOT a crew Agent or Tool at runtime."
+    must_not:
+      - "Never generate an LLM-Judge as a src/agents/*.py or a src/tools/*.py. It runs at evaluation time, over traces, not inside the crew."
+
+  - for_kind: project
+    path: "governance/openscale_monitor.py"
+    format: python
+    template: templates/openscale_monitor.py
+    evidence: "[INF] watsonx.governance / OpenScale placeholder — payload logging and quality/drift/PII monitors. Placeholder by design; the AIR keeps the endpoint out of scope."
+    schema_facts:
+      - "Emit when the drawing shows governance / guardrails / PII / monitoring. It is a loud NotImplementedError stub reading its endpoint from the environment, called from the guardrail callbacks — never an invented API shape."
+    must_not:
+      - "Never generate a plausible-looking governance call with a guessed endpoint or a hardcoded key. A visible gap beats a silent fake."
+
+  - for_kind: project
+    path: "pyproject.toml"
+    format: toml
+    template: templates/pyproject.toml
+    evidence: "[DOC] CrewAI is distributed as the `crewai` package; a crewai project is run with `crewai run`, which needs a real project.scripts entrypoint."
+    schema_facts:
+      - "Depends on crewai (and crewai-tools when a BaseTool from the toolkit is used). List langfuse only when observability is generated, and ragas + datasets only when eval/ragas exists — a dependency the offline gate cannot run must be flagged, not silently assumed."
+      - "requires-python matches the python_version parameter; the [project.scripts] run entry points at src/crew.py's kickoff so `crewai run` works."
+    must_not:
+      - "Never pin a crewai version this profile has not verified — it is [DOC]/[NV], so leave the constraint loose and say so, rather than claiming a tested pin."
+
+  - for_kind: project
+    path: "README.md"
+    format: markdown
+    template: templates/README.md
+    evidence: "[INF] Every generated project states how to run it, which drawing it came from, and the import/run order the SME layer needs."
+    schema_facts:
+      - "State the run order: set the .env (GROQ_API_KEY + any tool/langfuse keys) -> install -> `crewai run` (or python -m src.crew). Note that status is documented/structural-only: this code has not been run against an installed crewai."
+
+  - for_kind: project
+    path: ".env.example"
+    format: text
+    template: templates/env.example
+    evidence: "[INF] Agents need an LLM key; tools, langfuse and governance need theirs. All belong in the environment, never in code."
+    schema_facts:
+      - "Env var NAMES only, no values. GROQ_API_KEY for the default model; per-tool keys; LANGFUSE_* when observability is generated; WXO_GOVERNANCE_* when governance is generated."
+
+# -----------------------------------------------------------------------------
+parameters:
+  - title: "Runtime"
+    required: [python_version]
+    properties:
+      python_version: {type: string, default: "3.11"}
+      process:
+        type: string
+        enum: [sequential, hierarchical]
+        default: sequential
+        description: "hierarchical when a supervisor/manager agent delegates; sequential when agents run in a fixed order."
+  - title: "Model and behaviour"
+    properties:
+      llm:
+        type: string
+        default: "groq/openai/gpt-oss-120b"
+        description: "Model id in <provider>/<model> LiteLLM form. ARCHITECTURAL DEFAULT: groq/openai/gpt-oss-120b, applied to every generated agent unless the AIR names one per agent."
+      manager_llm:
+        type: string
+        default: "groq/openai/gpt-oss-120b"
+        description: "The model the hierarchical manager reasons with when a manager_agent is not drawn."
+  - title: "Multi-LLM routing"
+    advanced: true
+    properties:
+      router_enabled:
+        type: boolean
+        default: false
+        description: "true when the drawing shows a gateway/router in front of the LLMs or a primary+backup. Generates src/llm/router.py with fallback across LLMs."
+      fallback_llm:
+        type: string
+        default: ""
+        description: "The backup model the router falls over to after the primary. Empty = no fallback."
+  - title: "Evaluation and observability"
+    advanced: true
+    properties:
+      evaluation_model:
+        type: string
+        default: "groq/openai/gpt-oss-120b"
+        description: "The LLM-Judge model that scores outputs at evaluation time (eval/, RAGAS). Not a runtime agent."
+      langfuse_enabled:
+        type: boolean
+        default: false
+        description: "Register langfuse as a litellm callback and generate src/observability/langfuse_tracing.py."
+
+inference_rules:
+  - {param: python_version, from: "experiment_plan.stack.runtime", when_absent: default, default: "3.11"}
+  - {param: process, from: "experiment_plan.stack.process", when_absent: default, default: "sequential"}
+  - {param: llm, from: "experiment_plan.stack.llm", when_absent: default, default: "groq/openai/gpt-oss-120b"}
+  - {param: evaluation_model, from: "experiment_plan.stack.evaluation_model", when_absent: default, default: "groq/openai/gpt-oss-120b"}
+  - {param: output_language, from: "meta.output_language", when_absent: default, default: "en"}
+  - param: manager
+    from: "meta.manager_agent"
+    when_absent: ask
+    question: "Which agent is the manager/supervisor of the crew?"
+    blocking: false
+
+questions:
+  - id: q_process
+    param: process
+    when: {always: true}
+    question: "Is there a supervisor/manager agent that delegates (hierarchical), or do the agents run in a fixed order (sequential)?"
+    options: ["hierarchical — a manager delegates", "sequential — fixed order"]
+    blocking: true
+    why: "The process decides whether delegation happens at all. A hierarchical drawing built sequentially never delegates; a sequential one built hierarchically raises without a manager."
+  - id: q_manager
+    param: manager
+    when: {has_component_kind: agent}
+    question: "Which agent is the manager/supervisor of the crew? It becomes manager_agent of a hierarchical crew, not a worker in agents=[]."
+    blocking: false
+    why: "A hierarchical crew needs a manager agent or a manager_llm; guessing it puts the wrong agent in charge of delegation, or duplicates it as both manager and worker."
+  - id: q_task_outputs
+    param: task_outputs
+    when: {always: true}
+    question: "What is each task's expected_output — the concrete result the crew should produce at each step?"
+    blocking: false
+    why: "expected_output is what an agent aims at; vague outputs produce vague work."
+  - id: q_tool_credentials
+    param: tool_credentials
+    when: {has_component_kind: external}
+    question: "For each external system a tool calls, what is its base URL and which environment variable holds its credential?"
+    options: ["decided", "not decided yet"]
+    blocking: false
+    why: "A tool that guesses an endpoint or a key imports cleanly and fails on the first real call, at demo time."
+  - id: q_output_language
+    param: output_language
+    when: {air_missing: "meta.output_language"}
+    question: "What language should the agents SPEAK to end users? (Code, identifiers and comments stay in English.)"
+    options: ["en", "pt-BR", "es", "fr"]
+    blocking: false
+    why: "Backstories and expected_outputs written in the wrong language make the crew answer your Brazilian users in English, discovered in front of them."
+
+phases:
+  analyze: inherit
+  plan: inherit
+  scaffold: override
+  validate: decorate
+
+bob_modes:
+  scaffold: {slug: arch-scaffold, approval_mode: yolo, cwd: "{project_root}"}
+  validate: {slug: arch-validator, approval_mode: auto_edit, cwd: "{project_root}"}
+
+templates: templates/
+
+validate:
+  level: structural-only
+  level_reason: "crewai is not installed here, so validation is Python-syntax level only. There is no offline crew-import or kickoff gate on this machine. Mark full and add a `python -c 'import crewai'` + build check once crewai is on the machine."
+  checks:
+    - name: py-syntax
+      cmd: "python3 -m py_compile {files:src/**/*.py}"
+      requires: [{binary: python3}]
+      confidence: "[VER] py_compile is stdlib and catches every syntax error in the generated crew, agents, tools and callbacks."
+      degrade: "No Python interpreter: the crew code is not parsed at all."
+      blocking: true
+    - name: eval-syntax
+      cmd: "python3 -m py_compile {files:eval/**/*.py}"
+      requires: [{binary: python3}]
+      confidence: "[VER] py_compile is stdlib; parses the eval/ragas scripts when they exist."
+      degrade: "No Python interpreter: the eval scripts are not parsed."
+      blocking: false
+    - name: ruff
+      cmd: "ruff check src/"
+      requires: [{binary: ruff}]
+      confidence: "[VER] ruff is installed on this machine."
+      degrade: "Skipping lint: undefined names in agent/tool/callback bodies survive to the first run. `pip install ruff`."
+      blocking: false
+    - name: crew-imports
+      cmd: "python3 -c \"import crewai\""
+      requires: [{python_module: crewai}]
+      confidence: "[NV] crewai is not installed here, so this never runs on this machine. When present it proves the framework imports; it still does not kickoff a crew."
+      degrade: "Without crewai installed, nothing confirms the imported class names (Agent/Task/Crew/Process/BaseTool/LLM) and constructor keywords actually exist in the installed version. `pip install crewai crewai-tools`."
+      blocking: false

@@ -1,0 +1,36 @@
+# =============================================================================
+# Agentic frameworks arch2code can target.
+# =============================================================================
+# When a drawing is an AI-agent architecture, the FIRST thing the pipeline does
+# is ask the human which framework to build for — the analyst must not guess it
+# (an early run inferred "LangGraph, LangChain, or ..." on its own, which is
+# exactly the decision that belongs to a person).
+#
+# Adding a framework is DATA: one entry here plus its profile under profiles/.
+# `profile` is the id of the scaffold profile the choice maps to; the scaffold
+# builds the framework's real structure from that contract, never generic code.
+# =============================================================================
+
+frameworks:
+  - id: orchestrate-adk
+    name: "IBM watsonx Orchestrate (ADK)"
+    profile: orchestrate-adk
+    default: true
+    summary: >
+      Native ADK agents, Python tools and knowledge bases on the watsonx
+      Orchestrate platform. Governance and AgentOps via wx.governance / OpenScale
+      placeholders and the ADK evaluation framework. This is the house speciality.
+
+  - id: langgraph
+    name: "LangGraph"
+    profile: langgraph
+    summary: >
+      A StateGraph of agent nodes with an explicit checkpointer and typed state.
+      Open framework; RAGAS for RAG evaluation.
+
+  - id: crewai
+    name: "CrewAI"
+    profile: crewai
+    summary: >
+      A crew of role-based agents with tasks, tools and a process. Open
+      framework for collaborative multi-agent solutions.

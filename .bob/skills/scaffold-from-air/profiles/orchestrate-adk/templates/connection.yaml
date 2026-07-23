@@ -1,0 +1,22 @@
+# arch2code: generated from AIR {{run_id}} :: {{component_id}}
+# source: {{source_artifact}}  evidence: {{evidence}}
+# DO NOT EDIT BY HAND — regenerate via the arch-scaffold mode
+#
+# ADK ConnectionConfiguration — one per external app_id a tool authenticates to.
+# Import with `orchestrate connections import` (or add/configure) BEFORE the
+# tools that name this app_id in expected_credentials. The credential VALUES are
+# never here: they are set per environment with `orchestrate connections
+# set-credentials`. This file declares the shape, not the secret.
+#
+# Contract: ibm_watsonx_orchestrate connections (ADK 2.12.0). [DOC]
+
+spec_version: v1
+kind: connection
+
+app_id: "{{app_id}}"                # matches expected_credentials[].app_id in the tool
+auth_type: "{{auth_type}}"          # api_key_auth | basic_auth | bearer_token | key_value | oauth2_client_creds
+security_scheme: "{{security_scheme}}"   # e.g. api_key, http_bearer, oauth2
+
+# The endpoint the tool calls; the credential is injected by the platform at
+# call time, so no key appears in this file or in the tool.
+server_url: "{{server_url}}"        # e.g. https://serpapi.com/search — never a secret

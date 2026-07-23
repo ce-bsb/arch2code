@@ -1,0 +1,278 @@
+# =============================================================================
+# container-microservice — the default target, and the only one that consumes
+# the whole AIR vocabulary.
+# =============================================================================
+# This profile is the executable version of reference/stack-map.md. The rules
+# that were prose there ("category is not product", "external is never real") are
+# capability declarations here, so they can refuse instead of being read past.
+# =============================================================================
+
+id: container-microservice
+name: "Containerised microservices (docker compose)"
+version: 1
+extends: null
+status: verified
+
+summary: >
+  One directory per component, one adapter per connection, a compose file that
+  brings the whole drawing up with a single command. The broadest target: it is
+  the only one that has an artifact for every component kind and every protocol
+  the AIR can express, which is exactly why it is the fallback when a specialised
+  profile refuses.
+
+provenance:
+  - "[VER] The kind -> technology defaults are the ones already in .bob/skills/scaffold-from-air/reference/stack-map.md, which has driven every run in this repo so far."
+  - "[VER] python3, ruff, mypy, docker and javac are installed on this machine; those checks were confirmed present, not assumed."
+  - "[NV] `docker compose config -q` was not executed against a generated compose file in this round."
+
+# -----------------------------------------------------------------------------
+capabilities:
+
+  component_kinds:
+    supports: [service, ui, gateway, database, cache, queue, topic, job, function, storage, external, actor, agent, tool, knowledge_base]
+    excludes: []
+
+  protocols:
+    supports: [http, https, grpc, graphql, amqp, kafka, jdbc, sql, s3, file, websocket, internal]
+    excludes:
+      - feature: mqtt
+        reason: "There is no MQTT broker in the default compose stack, so a generated client would come up pointing at nothing."
+        workaround: "Add an explicit component with kind: queue and tech: mosquitto, or switch the edge to amqp and get RabbitMQ."
+      - feature: external_chat
+        reason: "A conversational hand-off to another platform's agent is not a wire protocol this target can implement — there is no endpoint to call."
+        workaround: "If there IS an HTTP endpoint behind it, redraw the edge as https. If it is a real agent-to-agent hand-off, use the orchestrate-adk or langgraph profile."
+
+  sync_modes:
+    supports: [sync, async]
+    excludes: []
+
+  boundary_kinds:
+    supports: [namespace, cluster, logical]
+    excludes:
+      - feature: vpc
+        reason: "Compose has no VPC. Generating one would mean inventing a network topology the drawing only gestured at."
+        workaround: "It becomes documentation in the README; use the compose network name to record the intent."
+      - feature: zone
+        reason: "Availability zones do not exist on one host."
+        workaround: "Keep it as documentation, or generate Kubernetes manifests instead."
+      - feature: dmz
+        reason: "A DMZ is a firewall posture, not a compose feature; a generated network called dmz would imply an isolation nothing enforces."
+        workaround: "Document it, and put the real boundary in your deployment target."
+      - feature: account
+        reason: "Cloud accounts have no local representation."
+      - feature: onprem
+        reason: "Everything in a compose file runs in the same place; the distinction disappears."
+        workaround: "Keep it as documentation — it still tells the reader which services you do not control."
+      - feature: cloud
+        reason: "Same as onprem: placement is invisible in compose."
+      - feature: external_system
+        reason: "Everything inside is stubbed rather than deployed, so it produces stubs, not a network boundary."
+        workaround: "Keep it — it is what tells the generator to build WireMock stubs instead of real services."
+
+  nonfunctional_honored: [latency, throughput]
+
+# -----------------------------------------------------------------------------
+artifacts:
+
+  - for_kind: service
+    path: "services/{id}/"
+    format: python
+    evidence: "[VER] reference/stack-map.md: service -> FastAPI on python:3.11-slim, the default used by every run in this repo."
+    schema_facts:
+      - "Each service gets an entrypoint, per-environment configuration, a /health endpoint and structured logging. Without /health the experiment stage has nothing to measure."
+      - "responsibilities[] become the route list; anything not in responsibilities[] is not a route."
+    must_not:
+      - "Never add a cache, a metrics stack or a message bus the AIR did not ask for."
+      - "Never leave an empty handler as `pass`. Raise NotImplementedError naming the AIR id and the missing fact."
+
+  - for_kind: gateway
+    path: "services/{id}/"
+    format: python
+    evidence: "[VER] reference/stack-map.md: gateway -> FastAPI with routing."
+
+  - for_kind: database
+    path: "infra/{id}/"
+    format: sql
+    evidence: "[VER] reference/stack-map.md: database -> PostgreSQL 16, and DDL derived from the connections that touch it."
+    schema_facts:
+      - "Category is not product: the drawing said `database`. The product choice goes into assumptions[] and the human confirms it."
+      - "experiment_plan.stack wins over this default whenever it names a product."
+
+  - for_kind: cache
+    path: "infra/{id}/"
+    format: compose
+    evidence: "[VER] reference/stack-map.md: cache -> Redis 7."
+
+  - for_kind: queue
+    path: "infra/{id}/"
+    format: compose
+    evidence: "[VER] reference/stack-map.md: queue/topic -> Kafka in KRaft mode."
+    schema_facts:
+      - "Counter-indication carried over from stack-map.md: if the hypothesis is not about ordering, retention or reprocessing, RabbitMQ comes up in a third of the time and tests the same thing."
+
+  - for_kind: topic
+    path: "infra/{id}/"
+    format: compose
+    evidence: "[VER] reference/stack-map.md: queue/topic -> Kafka in KRaft mode."
+
+  - for_kind: storage
+    path: "infra/{id}/"
+    format: compose
+    evidence: "[VER] reference/stack-map.md: storage -> MinIO."
+
+  - for_kind: job
+    path: "jobs/{id}/"
+    format: python
+    evidence: "[VER] reference/stack-map.md: job -> script plus a compose cron."
+
+  - for_kind: function
+    path: "services/{id}/"
+    format: python
+    evidence: "[VER] reference/stack-map.md: a function is a single-route service in a prototype."
+
+  - for_kind: external
+    path: "stubs/{id}/"
+    format: json
+    evidence: "[VER] reference/stack-map.md: external -> WireMock or a FastAPI stub, never a real call."
+    must_not:
+      - "Never call a third-party API from the prototype. It puts flakiness, cost and a network dependency inside a measurement that has to be clean."
+
+  - for_kind: ui
+    path: "services/{id}/"
+    format: python
+    evidence: "[VER] reference/stack-map.md: ui -> an httpx client that exercises the flow; the prototype validates the backend, not the pixels."
+
+  - for_kind: actor
+    path: "tests/test_{id}_flow.py"
+    format: python
+    evidence: "[VER] reference/stack-map.md: actor -> a pytest that walks the actor's path end to end."
+
+  - for_kind: agent
+    path: "services/{id}/"
+    format: python
+    evidence: "[INF] Fallback mapping: an agent with no agentic platform behind it becomes an ordinary service that calls a model. Say so in assumptions[] — it is a real downgrade, not a translation."
+
+  - for_kind: tool
+    path: "services/{id}/tools.py"
+    format: python
+    evidence: "[INF] Fallback mapping: a tool becomes a plain function on the service that owns it."
+
+  - for_kind: knowledge_base
+    path: "infra/{id}/"
+    format: compose
+    evidence: "[INF] Fallback mapping: a knowledge base with no platform behind it is a vector store container plus an ingestion script. Record the product choice in assumptions[]."
+
+  - for_kind: project
+    path: "docker-compose.yml"
+    format: compose
+    evidence: "[VER] scaffold-from-air SKILL.md step 4: the prototype has to come up with one command."
+
+  - for_kind: project
+    path: ".env.example"
+    format: text
+    evidence: "[VER] .bob/rules-arch-scaffold/01-codegen-standards.md: .env.example documents, .env stays in .gitignore."
+
+  - for_kind: project
+    path: "Makefile"
+    format: text
+    evidence: "[VER] scaffold-from-air SKILL.md step 4: up / down / test / logs."
+
+# -----------------------------------------------------------------------------
+parameters:
+  - title: "Runtime"
+    required: [language]
+    properties:
+      language: {type: string, enum: [python, java, node], default: python}
+      python_version: {type: string, default: "3.11"}
+  - title: "Persistence"
+    advanced: true
+    properties:
+      db_product: {type: string, enum: [postgres, db2, mongodb], default: postgres}
+      mq_product: {type: string, enum: [kafka, rabbitmq, ibmmq], default: kafka}
+
+inference_rules:
+  - {param: language, from: "components[].tech", when_absent: default, default: "python"}
+  - {param: db_product, from: "experiment_plan.stack.database", when_absent: default, default: "postgres"}
+  - param: mq_product
+    from: "experiment_plan.stack.broker"
+    when_absent: ask
+    question: "The drawing shows a queue but not which broker. Kafka, RabbitMQ or IBM MQ?"
+    options: [kafka, rabbitmq, ibmmq]
+    blocking: true
+  - {param: output_language, from: "meta.output_language", when_absent: default, default: "en"}
+
+questions:
+  - id: q_broker_product
+    param: mq_product
+    when: {has_component_kind: queue}
+    question: "Which broker should the queue be? The drawing names a category, not a product."
+    options: [kafka, rabbitmq, ibmmq, "not decided — use the default and record an assumption"]
+    blocking: false
+    why: "Category is not product. Kafka in a laptop compose burns memory and startup time that were supposed to go to the hypothesis."
+  - id: q_db_product
+    param: db_product
+    when: {has_component_kind: database}
+    question: "Which database product? Postgres is the default; Db2 changes startup time, DDL and what fits inside the experiment window."
+    options: [postgres, db2, mongodb]
+    blocking: false
+    why: "Swapping the default for the IBM product is a real trade and belongs in assumptions[] with its impact, not in a silent template choice."
+  - id: q_async_delivery
+    param: delivery_semantics
+    when: {has_protocol: kafka}
+    question: "At-least-once or exactly-once for the async path? It changes the consumer code, not just a setting."
+    options: ["at-least-once, consumer is idempotent", "exactly-once", "not decided"]
+    blocking: false
+    why: "Generating a consumer without deciding this produces code that looks correct and duplicates records under retry."
+
+phases:
+  analyze: inherit
+  plan: inherit
+  scaffold: inherit
+  validate: inherit
+
+bob_modes:
+  scaffold: {slug: arch-scaffold, approval_mode: yolo, cwd: "{project_root}"}
+  validate: {slug: arch-validator, approval_mode: auto_edit, cwd: "{project_root}"}
+
+templates: null
+
+validate:
+  level: full
+  level_reason: "Python syntax, lint and the compose schema can all be checked offline on this machine."
+  checks:
+    - name: py-syntax
+      cmd: "python3 -m py_compile {files:**/*.py}"
+      requires: [{binary: python3}]
+      confidence: "[VER] py_compile is stdlib."
+      degrade: "No Python interpreter: nothing generated is parsed."
+      blocking: true
+    - name: ruff
+      cmd: "ruff check ."
+      requires: [{binary: ruff}]
+      confidence: "[VER] ruff is installed on this machine."
+      degrade: "Skipping lint: unused imports and undefined names survive to runtime."
+      blocking: false
+    - name: compose
+      cmd: "docker compose config -q"
+      requires: [{binary: docker}]
+      confidence: "[NV] docker is installed here but this command was not run against a generated compose file in this round."
+      degrade: "Skipping compose validation: a malformed service definition is only discovered by `make up`. Install Docker Desktop or the compose plugin."
+      blocking: true
+    - name: javac
+      cmd: "javac -proc:only -d /tmp/arch2code-javac {files:**/*.java}"
+      requires: [{binary: javac}]
+      confidence: "[VER] javac is present at /usr/bin/javac on this machine."
+      degrade: "Skipping Java syntax check: generated Java is unverified. Install a JDK."
+      blocking: true
+    - name: node-syntax
+      cmd: "node --check {files:**/*.js}"
+      requires: [{binary: node}]
+      confidence: "[VER] node is installed on this machine; --check parses without executing."
+      degrade: "Skipping JavaScript syntax check. Install Node.js."
+      blocking: true
+    - name: tsc
+      cmd: "tsc --noEmit"
+      requires: [{binary: tsc}]
+      confidence: "[NV] TypeScript compiler not present on this machine; the command comes from documentation."
+      degrade: "TypeScript is NOT type-checked here — tsc is not installed. Generated .ts files are shipped unverified. `npm i -g typescript`."
+      blocking: false

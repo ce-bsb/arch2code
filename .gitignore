@@ -2,3 +2,23 @@
 # IBM Bob CLI (bobshell) — binario de terceiro.
 # Embute credenciais OAuth e e software interno IBM: nao redistribuir.
 package/
+
+# Bob CLI tarball — mesmo motivo de package/: credenciais + licenca interna.
+bobshell-*.tgz
+
+# --- Secrets: NEVER commit. The .env.example next to each is the template. ---
+mcp/arch_vision/.env
+webapp/.env
+.bob/settings.json.orig
+.bob/.bob-errors/
+.bob/notes/
+**/.env
+
+# --- Local caches / editor / OS cruft ---
+**/__pycache__/
+*.pyc
+**/.pytest_cache/
+**/.ruff_cache/
+.vscode/
+.DS_Store
+**/.DS_Store

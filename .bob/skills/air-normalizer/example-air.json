@@ -1,0 +1,222 @@
+{
+  "air_version": "1.0",
+  "meta": {
+    "run_id": "20260716-1430-pedidos-napkin",
+    "source_artifact": ".arch/intake/inbox/rascunho-reuniao.jpg",
+    "source_sha256": "3b7c9f1a2d4e5b6c8a0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6e5f4a3",
+    "source_kind": "napkin",
+    "extraction_path": "vision",
+    "extracted_at": "2026-07-16T14:30:00-03:00",
+    "extractor": "watsonx:meta-llama/llama-3-2-90b-vision-instruct",
+    "overall_confidence": 0.81,
+    "human_reviewed_by": null,
+    "title": "Order flow sketch (napkin photo, meeting on 16/07)"
+  },
+
+  "components": [
+    {
+      "id": "app_mobile",
+      "name": "App Mobile",
+      "kind": "ui",
+      "tech": null,
+      "responsibilities": ["Where the customer order originates"],
+      "boundary": "externo",
+      "confidence": 0.95,
+      "evidence": { "kind": "bbox", "value": [0.06, 0.10, 0.18, 0.14], "label_text": "app" }
+    },
+    {
+      "id": "api_gateway",
+      "name": "API Gateway",
+      "kind": "gateway",
+      "tech": null,
+      "responsibilities": ["Single entry point", "Authentication"],
+      "boundary": "nuvem",
+      "confidence": 0.90,
+      "evidence": { "kind": "bbox", "value": [0.30, 0.10, 0.16, 0.12], "label_text": "GW" }
+    },
+    {
+      "id": "svc_pedidos",
+      "name": "Servico de Pedidos",
+      "kind": "service",
+      "tech": null,
+      "responsibilities": ["Create order", "Query status"],
+      "boundary": "nuvem",
+      "confidence": 0.92,
+      "evidence": { "kind": "bbox", "value": [0.52, 0.08, 0.20, 0.16], "label_text": "pedidos" }
+    },
+    {
+      "id": "db_pedidos",
+      "name": "Base de Pedidos",
+      "kind": "database",
+      "tech": null,
+      "responsibilities": ["Persist orders"],
+      "boundary": "nuvem",
+      "confidence": 0.88,
+      "evidence": { "kind": "bbox", "value": [0.54, 0.34, 0.14, 0.12], "label_text": "DB" }
+    },
+    {
+      "id": "fila_eventos",
+      "name": "Fila de Eventos",
+      "kind": "queue",
+      "tech": null,
+      "responsibilities": ["Decouple ordering from billing"],
+      "boundary": "nuvem",
+      "confidence": 0.76,
+      "evidence": { "kind": "bbox", "value": [0.76, 0.10, 0.14, 0.10], "label_text": "fila?" }
+    },
+    {
+      "id": "svc_faturamento",
+      "name": "Servico de Faturamento",
+      "kind": "service",
+      "tech": null,
+      "responsibilities": ["Issue the charge"],
+      "boundary": "nuvem",
+      "confidence": 0.84,
+      "evidence": { "kind": "bbox", "value": [0.76, 0.34, 0.18, 0.14], "label_text": "fatur" }
+    }
+  ],
+
+  "connections": [
+    {
+      "id": "c_app_gw",
+      "from": "app_mobile",
+      "to": "api_gateway",
+      "protocol": "https",
+      "sync": "sync",
+      "label": null,
+      "payload": null,
+      "confidence": 0.93,
+      "evidence": { "kind": "bbox", "value": [0.24, 0.16, 0.06, 0.02], "label_text": null }
+    },
+    {
+      "id": "c_gw_pedidos",
+      "from": "api_gateway",
+      "to": "svc_pedidos",
+      "protocol": "http",
+      "sync": "sync",
+      "label": "POST /pedidos",
+      "payload": null,
+      "confidence": 0.89,
+      "evidence": { "kind": "bbox", "value": [0.46, 0.15, 0.06, 0.03], "label_text": "POST /pedidos" }
+    },
+    {
+      "id": "c_pedidos_db",
+      "from": "svc_pedidos",
+      "to": "db_pedidos",
+      "protocol": "sql",
+      "sync": "sync",
+      "label": null,
+      "payload": null,
+      "confidence": 0.87,
+      "evidence": { "kind": "bbox", "value": [0.60, 0.24, 0.02, 0.10], "label_text": null }
+    },
+    {
+      "id": "c_pedidos_fila",
+      "from": "svc_pedidos",
+      "to": "fila_eventos",
+      "protocol": "unknown",
+      "sync": "async",
+      "label": null,
+      "payload": "PedidoCriado",
+      "confidence": 0.72,
+      "evidence": { "kind": "bbox", "value": [0.72, 0.14, 0.04, 0.02], "label_text": "PedidoCriado" },
+      "verified_by_second_pass": true
+    },
+    {
+      "id": "c_fila_fatur",
+      "from": "fila_eventos",
+      "to": "svc_faturamento",
+      "protocol": "unknown",
+      "sync": "async",
+      "label": null,
+      "payload": "PedidoCriado",
+      "confidence": 0.74,
+      "evidence": { "kind": "bbox", "value": [0.82, 0.20, 0.02, 0.14], "label_text": null },
+      "verified_by_second_pass": true
+    }
+  ],
+
+  "boundaries": [
+    { "id": "externo", "name": "Customer device", "kind": "logical", "contains": ["app_mobile"], "confidence": 0.9 },
+    { "id": "nuvem", "name": "Cloud (not specified in the drawing)", "kind": "cloud", "contains": ["api_gateway", "svc_pedidos", "db_pedidos", "fila_eventos", "svc_faturamento"], "confidence": 0.6 }
+  ],
+
+  "nonfunctional": [],
+
+  "unknowns": [
+    {
+      "id": "u_broker",
+      "about": "fila_eventos",
+      "question": "The sketch shows 'fila?' with a question mark. Which broker: Kafka, RabbitMQ or IBM MQ?",
+      "options": ["Kafka", "RabbitMQ", "IBM MQ", "decide during the experiment"],
+      "blocking": false,
+      "answer": null
+    },
+    {
+      "id": "u_retorno_fatur",
+      "about": "svc_faturamento",
+      "question": "Does Faturamento return a result to Pedidos? There is no arrow back in the drawing, but the business flow suggests a charge confirmation.",
+      "options": ["does not return (fire-and-forget)", "returns via event", "returns via synchronous call"],
+      "blocking": true,
+      "answer": null
+    }
+  ],
+
+  "assumptions": [
+    {
+      "id": "a_db_relacional",
+      "text": "The 'DB' in the sketch is a relational database (PostgreSQL in the experiment).",
+      "made_by": "model",
+      "rationale": "An order is an entity with state and transitions; the cylinder symbol is generic.",
+      "alternatives": ["MongoDB", "Db2"],
+      "impact": "If it turns out to be a document store, the generated data model and migrations are thrown away.",
+      "confirmed": false
+    },
+    {
+      "id": "a_gw_sem_logica",
+      "text": "The API Gateway only routes and authenticates, with no business logic.",
+      "made_by": "model",
+      "rationale": "No rule label appears inside the 'GW' box.",
+      "alternatives": ["gateway with aggregation (BFF)"],
+      "impact": "If it is a BFF, both the contract exposed to the app and the responsibility boundary change.",
+      "confirmed": false
+    }
+  ],
+
+  "experiment_plan": {
+    "goal": "Validate whether decoupling Pedidos from Faturamento through a queue holds up, before detailing the drawing any further.",
+    "hypotheses": [
+      {
+        "id": "h1",
+        "statement": "Pedidos can confirm creation back to the app without waiting for Faturamento.",
+        "falsifiable_by": "Take Faturamento down and check whether POST /pedidos still returns 201 in under 500ms.",
+        "relates_to": ["svc_pedidos", "c_pedidos_fila"]
+      },
+      {
+        "id": "h2",
+        "statement": "No PedidoCriado event is lost when Faturamento is down for 30s.",
+        "falsifiable_by": "Publish 100 events with the consumer stopped; count how many are processed after bringing it back. Fewer than 100 refutes it.",
+        "relates_to": ["fila_eventos", "c_fila_fatur"]
+      },
+      {
+        "id": "h3",
+        "statement": "The PedidoCriado contract carries enough data for Faturamento to operate without querying the Pedidos database.",
+        "falsifiable_by": "If Faturamento needs any call back to Pedidos, the hypothesis falls — and the drawing is missing an arrow.",
+        "relates_to": ["svc_faturamento", "c_fila_fatur"]
+      }
+    ],
+    "stack": {
+      "runtime": "python3.11",
+      "api": "fastapi",
+      "db": "postgresql16",
+      "broker": "kafka",
+      "orchestration": "docker-compose"
+    },
+    "out_of_scope": [
+      "Real authentication at the gateway (a stub that accepts any token)",
+      "Real tax invoicing in Faturamento (a structured log is enough)",
+      "Any concern about scale, HA or tuning",
+      "The mobile app UI (an HTTP client stands in for it)"
+    ]
+  }
+}

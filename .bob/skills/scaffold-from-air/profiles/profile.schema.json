@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ibm.com/arch2code/target-profile.schema.json",
+  "title": "target.yaml — platform profile for arch2code codegen",
+  "description": "Declarative capability contract for one generation target. Everything a profile can do is DATA here, never code in the core. The point of the format is the symmetry between `supports` and `excludes`: a target must say out loud what it refuses and why, so the engine can refuse before spending a Bob session instead of generating plausible, wrong code.",
+  "type": "object",
+  "required": ["id", "name", "version", "status", "summary", "provenance", "capabilities", "artifacts", "bob_modes", "validate"],
+  "additionalProperties": false,
+
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Directory name and the value that goes into air.meta.target_profile."
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "extends": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "id of a profile to inherit from. Child capabilities replace the parent's group by group; a child artifact replaces the parent's entry with the same (for_kind, path) pair and is appended otherwise."
+    },
+    "status": {
+      "enum": ["verified", "documented", "experimental"],
+      "description": "verified = the artifact contract was checked against an installed toolchain on a real machine. documented = it comes from vendor documentation but nothing on this machine can confirm it. experimental = neither. The UI must show this; a 'documented' target can still be wrong."
+    },
+    "summary": { "type": "string", "minLength": 20 },
+
+    "provenance": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Why anyone should believe this profile's artifact contract. Each line starts with [VER], [DOC], [INF] or [NV]. A profile with only [NV] provenance is how a generator invents a schema and ships it with confidence.",
+      "items": { "type": "string", "pattern": "^\\[(VER|DOC|INF|NV)\\] " }
+    },
+
+    "capabilities": {
+      "type": "object",
+      "required": ["component_kinds", "protocols", "sync_modes", "boundary_kinds"],
+      "additionalProperties": false,
+      "properties": {
+        "component_kinds": { "$ref": "#/$defs/capability_group" },
+        "protocols": { "$ref": "#/$defs/capability_group" },
+        "sync_modes": { "$ref": "#/$defs/capability_group" },
+        "boundary_kinds": { "$ref": "#/$defs/capability_group" },
+        "nonfunctional_honored": {
+          "type": "array",
+          "items": { "enum": ["sla", "latency", "throughput", "availability", "security", "compliance", "cost", "retention"] },
+          "description": "Which nonfunctional[] kinds turn into code or configuration. Everything else becomes documentation, and the engine says so out loud instead of pretending it was implemented."
+        }
+      }
+    },
+
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The kind -> artifact map. One entry per AIR component kind this profile actually writes files for.",
+      "items": {
+        "type": "object",
+        "required": ["for_kind", "path", "format", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "for_kind": {
+            "type": "string",
+            "description": "AIR components[].kind, or a `kind[condition]` selector such as `service[boundary_kind=onprem]`, or the pseudo-kinds `project` (once per run) and `connection:<protocol>`."
+          },
+          "path": { "type": "string", "description": "Output path relative to the project root. {id}, {name}, {slug} are substituted." },
+          "format": { "enum": ["yaml", "json", "python", "java", "typescript", "cobol", "jcl", "bms", "robot", "csharp", "sql", "dockerfile", "compose", "markdown", "text", "toml"] },
+          "template": { "type": ["string", "null"], "default": null, "description": "Path to a template, relative to the profile directory. null = the scaffold mode writes it from schema_facts alone." },
+          "schema_facts": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Verbatim, checkable statements about the artifact format. This is the anti-invention mechanism: the generator is not allowed to reach for anything that is not stated here."
+          },
+          "must_not": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Known wrong outputs, spelled out. Every line here is a mistake that has actually been made or is one search result away from being made."
+          },
+          "evidence": { "type": "string", "pattern": "^\\[(VER|DOC|INF|NV)\\] " }
+        }
+      }
+    },
+
+    "parameters": {
+      "type": "array",
+      "description": "Pages of a hierarchical form (Backstage spec.parameters). Never a linear wizard: the target choice changes which questions make sense, so the pages are interdependent by construction.",
+      "items": {
+        "type": "object",
+        "required": ["title", "properties"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "advanced": { "type": "boolean", "default": false, "description": "true = collapsed by default. Progressive disclosure, not a required step." },
+          "required": { "type": "array", "items": { "type": "string" } },
+          "properties": { "type": "object", "additionalProperties": { "type": "object" } }
+        }
+      }
+    },
+
+    "inference_rules": {
+      "type": "array",
+      "description": "What the engine may read from the AIR instead of asking. Rule 2 of the orchestrator applies: when the AIR does not answer, `ask` is the only honest fallback other than a declared default.",
+      "items": {
+        "type": "object",
+        "required": ["param", "from", "when_absent"],
+        "additionalProperties": false,
+        "properties": {
+          "param": { "type": "string" },
+          "from": { "type": "string", "description": "Dotted AIR path. `[]` collects across an array, e.g. `components[].tech`; the most frequent non-null value wins." },
+          "when_absent": { "enum": ["default", "ask", "null"] },
+          "default": {},
+          "question": { "type": "string", "description": "Required when when_absent = ask." },
+          "options": { "type": "array", "items": { "type": "string" } },
+          "blocking": { "type": "boolean", "default": true }
+        }
+      }
+    },
+
+    "questions": {
+      "type": "array",
+      "description": "What this profile must ask the human when the AIR is silent — the questions that only make sense once this target is chosen.",
+      "items": {
+        "type": "object",
+        "required": ["id", "when", "question", "blocking"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "param": { "type": ["string", "null"], "default": null },
+          "when": {
+            "type": "object",
+            "description": "Exactly one predicate. Supported: always, air_missing (dotted path), air_present, has_component_kind, has_protocol, has_sync_mode, has_boundary_kind.",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "maxProperties": 1,
+            "properties": {
+              "always": { "const": true },
+              "air_missing": { "type": "string" },
+              "air_present": { "type": "string" },
+              "has_component_kind": { "type": "string" },
+              "has_protocol": { "type": "string" },
+              "has_sync_mode": { "type": "string" },
+              "has_boundary_kind": { "type": "string" }
+            }
+          },
+          "question": { "type": "string", "minLength": 10 },
+          "options": { "type": "array", "items": { "type": "string" }, "description": "A closed question unblocks faster than an open one." },
+          "blocking": { "type": "boolean" },
+          "why": { "type": "string", "description": "What goes wrong in the generated code if this is guessed. Shown next to the question." }
+        }
+      }
+    },
+
+    "phases": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "How this profile relates to the core pipeline stage by stage.",
+      "properties": {
+        "analyze": { "$ref": "#/$defs/phase_strategy" },
+        "plan": { "$ref": "#/$defs/phase_strategy" },
+        "scaffold": { "$ref": "#/$defs/phase_strategy" },
+        "validate": { "$ref": "#/$defs/phase_strategy" }
+      }
+    },
+
+    "bob_modes": {
+      "type": "object",
+      "required": ["scaffold"],
+      "additionalProperties": false,
+      "properties": {
+        "scaffold": { "$ref": "#/$defs/bob_mode" },
+        "validate": { "$ref": "#/$defs/bob_mode" }
+      }
+    },
+
+    "templates": { "type": ["string", "null"], "default": null, "description": "Template directory relative to the profile." },
+
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Scripts relative to the profile directory. A non-zero exit aborts generation and the partial output is discarded.",
+      "properties": {
+        "pre_prompt": { "type": "string" },
+        "pre_gen": { "type": "string" },
+        "post_gen": { "type": "string" }
+      }
+    },
+
+    "validate": {
+      "type": "object",
+      "required": ["level", "checks"],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "enum": ["full", "structural-only"],
+          "description": "full = a real compiler or spec validator can run offline on this machine. structural-only = nothing offline can prove this compiles; the profile must say so in the UI rather than imply a guarantee it cannot give."
+        },
+        "level_reason": { "type": "string" },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "cmd", "confidence"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+              "cmd": { "type": "string", "description": "Shell command run from the generated project root. {files:GLOB} expands to the matching files; with no match the check is skipped, not failed." },
+              "requires": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "binary": { "type": "string" },
+                    "python_module": { "type": "string" }
+                  }
+                }
+              },
+              "confidence": { "type": "string", "pattern": "^\\[(VER|DOC|INF|NV)\\] " },
+              "degrade": { "type": "string", "description": "Exactly what is NOT being checked when the requirement is missing, and how to install it. A skipped check that says nothing is worse than no check." },
+              "blocking": { "type": "boolean", "default": true }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "capability_group": {
+      "type": "object",
+      "required": ["supports", "excludes"],
+      "additionalProperties": false,
+      "description": "The include*/exclude* pair. `unknown` never belongs in either list: it is always a question for the human, never a capability.",
+      "properties": {
+        "supports": { "type": "array", "items": { "type": "string" } },
+        "excludes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["feature", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "feature": { "type": "string" },
+              "reason": { "type": "string", "minLength": 15, "description": "Written for the person who drew the diagram, not for the maintainer." },
+              "workaround": { "type": "string", "description": "The redraw or the target swap that makes it work. A refusal with no way forward is a dead end." }
+            }
+          }
+        }
+      }
+    },
+    "phase_strategy": { "enum": ["inherit", "override", "decorate", "skip"] },
+    "bob_mode": {
+      "type": "object",
+      "required": ["slug", "approval_mode"],
+      "additionalProperties": false,
+      "properties": {
+        "slug": { "type": "string" },
+        "approval_mode": { "enum": ["yolo", "auto_edit", "manual"], "description": "arch-scaffold without yolo writes no file at all: Bob removes write_to_file from the toolset. Verified empirically." },
+        "cwd": { "type": "string" }
+      }
+    }
+  }
+}

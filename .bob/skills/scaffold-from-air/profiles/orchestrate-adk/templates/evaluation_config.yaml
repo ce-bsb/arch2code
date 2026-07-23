@@ -1,0 +1,41 @@
+# arch2code: generated from AIR {{run_id}} :: {{component_id}}
+# source: {{source_artifact}}  evidence: {{evidence}}
+# DO NOT EDIT BY HAND — regenerate via the arch-scaffold mode
+#
+# ADK AgentOps — the evaluation config that turns the AIR's experiment_plan
+# hypotheses into runnable test cases. Drive it with:
+#   orchestrate evaluations generate   (stories/*.md  -> test_cases/*.json)
+#   orchestrate evaluations evaluate   (runs the cases, scores the metrics)
+#   orchestrate evaluations red_teaming (runs attacks/*.yaml for the guardrails)
+# One test case per hypothesis (h1..hN) in experiment_plan. An LLM-Judge box in
+# the drawing is NOT a runtime service — it is this: evaluation_model + a
+# referenceless metric that judges the output.
+#
+# Contract: ibm_watsonx_orchestrate evaluations TestConfig (ADK 2.12.0). [INF]
+
+spec_version: v1
+name: "{{eval_name}}"
+
+# The model that judges the agent's answers (the "LLM-Judge" in the drawing).
+evaluation_model: "groq/openai/gpt-oss-120b"
+
+metrics:
+  # Pick per hypothesis. These are the built-in ADK metrics.
+  - answer_relevancy
+  - faithfulness            # keep only when a knowledge base / RAG path exists
+  - tool_call_accuracy      # for agents that route to tools/collaborators
+  - agent_routing_accuracy  # for the supervisor's delegation (h1)
+
+similarity_threshold: {{similarity_threshold}}   # e.g. 0.7 — below this a case fails
+
+llm_user_config:
+  # Simulated user that drives the conversation during evaluation.
+  personas:
+    - "a buyer comparing prices for a product"
+  user_response_style: concise
+
+langfuse_enabled: {{langfuse_enabled}}   # true ties evaluation traces to observability/tracing.env
+
+# One story per hypothesis lives in stories/; `evaluations generate` expands each
+# into test_cases/*.json. Red-team attacks (PII injection, jailbreak) that test a
+# guardrail hypothesis live in attacks/ and run with `evaluations red_teaming`.

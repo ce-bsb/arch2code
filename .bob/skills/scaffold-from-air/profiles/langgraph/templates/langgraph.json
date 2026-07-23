@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/langchain-ai/langgraph/main/libs/cli/schemas/schema.json",
+  "python_version": "{{python_version}}",
+  "dependencies": ["."],
+  "graphs": {
+    "{{graph_id}}": "src/graphs/{{entry_component_id}}.py:graph"
+  },
+  "env": ".env"
+}

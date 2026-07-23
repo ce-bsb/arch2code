@@ -1,0 +1,492 @@
+# =============================================================================
+# langgraph — LangGraph application (StateGraph + langgraph.json manifest)
+# =============================================================================
+# Cheapest of the five profiles to deploy: the deployable surface is one small
+# declarative manifest, and the framework ships its own validator for it. What is
+# NOT cheap is the graph semantics — a node that should have been an edge, or a
+# database drawn as a node, produces a graph that RUNS and is WRONG. That is why
+# boundaries, checkpointers and the pre/post governance wrappers are declared here
+# rather than left to the scaffold model's judgement.
+#
+# langgraph is NOT installed on this machine. Everything below is [DOC] (LangGraph
+# / LangChain documentation) or [INF] (a mapping decision made here), never [VER].
+# The offline gate is therefore structural-only: py_compile on the graph code and
+# a stdlib json.load on the manifest. `langgraph build` would raise the bar to
+# full, but it is absent here and the profile says so instead of implying a
+# guarantee it cannot give.
+# =============================================================================
+
+id: langgraph
+name: "LangGraph — StateGraph application"
+version: 3
+extends: null
+status: documented
+
+summary: >
+  Generates a LangGraph application from an agentic drawing: a typed State with
+  reducers, one node per service, conditional edges for gateways, create_react_agent
+  subgraphs for agents, @tool functions, a langgraph.json manifest and a pyproject.
+  Databases and caches become checkpointers and stores, not nodes — the single
+  mapping mistake that turns a correct drawing into a graph that reasons over its
+  own persistence. Ships the AgentOps layer too: pre/post guardrail nodes, a
+  multi-LLM router with fallbacks, RAGAS retrieval scoring, LangSmith/Langfuse
+  tracing and a governance placeholder.
+
+provenance:
+  - "[DOC] langgraph.json manifest keys ($schema, dependencies, graphs, env, python_version, dockerfile_lines) and `langgraph build` as the manifest validator — LangGraph platform documentation."
+  - "[DOC] StateGraph / add_node / add_edge / add_conditional_edges / compile / START / END, langgraph.graph.message.add_messages reducer, langgraph.checkpoint.memory.MemorySaver and langgraph.checkpoint.postgres.PostgresSaver, interrupt_before / interrupt, and langgraph.prebuilt.create_react_agent — LangGraph documentation."
+  - "[DOC] langchain.chat_models.init_chat_model and Runnable.with_fallbacks — LangChain documentation. The architectural default model for every generated agent is groq/openai/gpt-oss-120b (init_chat_model('openai/gpt-oss-120b', model_provider='groq')), NOT a legacy watsonx granite id."
+  - "[NV] langgraph is NOT installed on this machine. Nothing in this profile was executed against the real framework; the manifest shape, the checkpointer API and create_react_agent's signature come from documentation only and must be re-verified with `pip install langgraph langgraph-cli` before any [VER] claim."
+  - "[INF] The AIR-to-graph mapping (service -> node, gateway -> conditional edge, database/cache -> checkpointer/store, agent -> subgraph, tool -> @tool, boundary -> compiled subgraph) is a design decision of this profile, not a framework rule."
+  - "[INF] The AgentOps/governance layer (guardrails_pre / redaction_post wrapper nodes, llm/router.py with_fallbacks, eval/ragas, eval/observability, governance/openscale_monitor.py) mirrors the orchestrate-adk SME layer. These are compositions of LangGraph/LangChain primitives, not framework features, and the governance client is a loud placeholder, never an invented endpoint."
+
+# -----------------------------------------------------------------------------
+capabilities:
+
+  component_kinds:
+    supports: [service, gateway, function, agent, tool, knowledge_base, database, cache, external, actor]
+    excludes:
+      - feature: ui
+        reason: "A graph has no front end. Whatever calls the graph is the entrypoint, and it lives outside the generated application."
+        workaround: "Mark it kind: actor if it is the human, or drop it and let the caller be the API server you already have."
+      - feature: queue
+        reason: "LangGraph does not consume from a broker on its own. A node that blocks on a queue never returns and the graph run never ends."
+        workaround: "Keep the consumer outside and let it invoke the graph per message, or model the wait as an interrupt and resume the thread when the message arrives."
+      - feature: topic
+        reason: "Same as queue: nothing in the graph subscribes."
+        workaround: "Invoke the graph from your existing subscriber."
+      - feature: job
+        reason: "Scheduling is not part of a graph definition."
+        workaround: "Generate the schedule with the container-microservice profile and have it call this graph."
+      - feature: storage
+        reason: "Object storage is not a graph concept; it is something a node's code happens to use."
+        workaround: "Draw it as external and let the node that needs it hold the client."
+
+  protocols:
+    supports: [internal, http, https, sql, jdbc, file, external_chat]
+    excludes:
+      - feature: mqtt
+        reason: "No native adapter, and a subscription cannot live inside a node invocation."
+        workaround: "Wrap the client in a node with its own polling loop, or bridge to HTTP outside the graph."
+      - feature: amqp
+        reason: "Same as mqtt — no adapter, and a blocking consume breaks the run."
+        workaround: "Consume outside and invoke the graph per message."
+      - feature: kafka
+        reason: "A consumer group cannot be held across a graph invocation."
+        workaround: "Consume outside and invoke the graph per record."
+      - feature: grpc
+        reason: "Supported by whatever client you write inside a node, but nothing in the graph contract expresses it, so this profile will not pretend to generate the stubs."
+        workaround: "Declare the stub package as a dependency and write the node body by hand."
+      - feature: graphql
+        reason: "Same as grpc: it is a node's private business, not a graph edge."
+      - feature: websocket
+        reason: "Streaming out of a graph is done with the framework's own streaming API, not with a socket declared as an edge."
+        workaround: "Use stream mode on the graph invocation instead of drawing a socket."
+      - feature: s3
+        reason: "Object access is node-internal, not an edge in the graph."
+
+  sync_modes:
+    supports: [sync, async]
+    excludes: []
+
+  boundary_kinds:
+    supports: [logical, namespace, cluster]
+    excludes:
+      - feature: vpc
+        reason: "Network topology has no representation in a graph definition."
+      - feature: zone
+        reason: "Placement is a deployment concern, not a graph concern."
+      - feature: onprem
+        reason: "Where the process runs is not expressible in the manifest."
+      - feature: cloud
+        reason: "Same as onprem."
+      - feature: dmz
+        reason: "Network zoning is not part of a graph."
+      - feature: account
+        reason: "Tenancy is a deployment concern."
+      - feature: external_system
+        reason: "Everything inside stays outside the graph by definition; it becomes a client inside a node, not a subgraph."
+        workaround: "Keep it — the boundary is still useful documentation, it just produces no graph structure."
+
+  nonfunctional_honored: [latency, retention]
+
+# -----------------------------------------------------------------------------
+# kind -> artifact. schema_facts is the contract a template may rely on; must_not
+# is the list of ways this exact artifact has already been got wrong. Placeholders
+# in the templates are {{...}}.
+artifacts:
+
+  # --- the manifest: the deployable surface ---------------------------------
+  - for_kind: project
+    path: "langgraph.json"
+    format: json
+    template: templates/langgraph.json
+    evidence: "[DOC] Manifest keys from the LangGraph platform documentation; validated by `langgraph build`."
+    schema_facts:
+      - "Keys: $schema, dependencies (list, `.` for the local package), graphs (map of graph id -> \"path/to/file.py:attribute\"), env (a .env path or a map), python_version, dockerfile_lines."
+      - "graphs and dependencies are the two that must be present; a graph id maps to `module_path:variable_name` where the variable is the COMPILED graph (the result of builder.compile())."
+      - "The value after the colon is the attribute name in that module, so the module has to expose it at import time — a module-level `graph = builder.compile(...)`, not something built inside a main()."
+      - "JSON forbids comments, so this file carries NO `# arch2code` header. Traceability to the AIR run lives in the graph modules it points at and in README.md instead."
+      - "One entry per entry-point graph. The supervisor/router graph is the one the caller invokes; specialist subgraphs are imported by it, not listed here unless independently deployable."
+    must_not:
+      - "Never point a graph entry at an uncompiled StateGraph or a builder. The attribute must be the result of .compile()."
+      - "Never invent manifest keys. If a setting is not one of the documented keys, it belongs in the application code, not the manifest."
+      - "Never add a comment to this file to satisfy the traceability header. json.load rejects it and the manifest gate fails."
+
+  # --- the state: the contract every node shares ----------------------------
+  - for_kind: project
+    path: "src/state.py"
+    format: python
+    template: templates/state.py
+    evidence: "[DOC] typing.TypedDict + typing.Annotated reducers and langgraph.graph.message.add_messages, LangGraph documentation."
+    schema_facts:
+      - "The graph state is a TypedDict. Each key a node writes is a field; the graph merges each node's returned partial dict into it."
+      - "A field that ACCUMULATES rather than overwrites is `Annotated[list, add_messages]` (for chat turns) or `Annotated[list, operator.add]` (for a growing list). A plain field is last-writer-wins."
+      - "add_messages is imported from langgraph.graph.message and is the reducer for the messages channel — it appends and de-duplicates by id, it does not replace."
+      - "This is the single place the reducer decision (from question q_state_shape) is written. Every node's return type is a subset of these keys."
+    must_not:
+      - "Never give the messages key a plain (non-Annotated) type. Without add_messages every node overwrites the history and the agent forgets the conversation — a silent, demo-time failure."
+      - "Never put runtime objects (a db handle, a model client) in the state. State is the data that flows between nodes; the checkpointer and the model are passed to compile()/bound in the node, not carried in state."
+
+  # --- service -> node -------------------------------------------------------
+  - for_kind: service
+    path: "src/nodes/{id}.py"
+    format: python
+    template: templates/node.py
+    evidence: "[INF] Profile mapping decision: a service is a unit of work in the flow, which is a node."
+    schema_facts:
+      - "A node is a callable taking the state and returning a PARTIAL state update — a dict of only the keys it changed, not the whole state."
+      - "The node's registered name in the graph is the AIR component id, so traceability from graph to drawing is 1:1."
+      - "A node may read anything in the state and must annotate its return as a subset of the state's keys."
+      - "Async is allowed: `async def` nodes work when the graph is invoked with ainvoke/astream. Match the sync mode the drawing declared."
+    must_not:
+      - "Never mutate the state object in place and return None. Return the delta dict; in-place mutation defeats the checkpointer and reducers."
+      - "Never put a blocking wait for a human inside a node. A node that waits for a person is an interrupt (interrupt_before / interrupt), not a time.sleep."
+      - "Never open the database connection here. Persistence is the checkpointer, configured at compile() — see src/checkpointer.py."
+
+  # --- gateway -> conditional edge ------------------------------------------
+  - for_kind: gateway
+    path: "src/nodes/{id}.py"
+    format: python
+    template: templates/router.py
+    evidence: "[INF] Profile mapping decision: a gateway decides where the flow goes, which is a conditional edge, not a node that calls the next service itself."
+    schema_facts:
+      - "A gateway becomes a routing FUNCTION plus builder.add_conditional_edges(source, route_fn, mapping), not a node with a hard-coded add_edge to the next service."
+      - "The routing function takes the state and returns a KEY of the mapping; the mapping resolves that key to the next node name (or END)."
+      - "Every value the routing function can return MUST be a key of the mapping, or the run raises at that hop. Enumerate the branches from the drawing's outgoing edges."
+    must_not:
+      - "Never make the gateway a node that itself invokes the downstream service. That hides the branch from the graph and the checkpointer cannot resume mid-decision."
+      - "Never return a next-node name that is not in the conditional-edge mapping. LangGraph raises `Found edge starting at unknown node`."
+
+  # --- agent -> create_react_agent subgraph ---------------------------------
+  - for_kind: agent
+    path: "src/graphs/{id}.py"
+    format: python
+    template: templates/graph.py
+    evidence: "[DOC] langgraph.prebuilt.create_react_agent for a tool-calling specialist; StateGraph for a supervisor/router graph — LangGraph documentation."
+    schema_facts:
+      - "A specialist agent (one LLM + its tools) is `create_react_agent(model, tools=[...], prompt=...)`, which returns an already-compiled graph usable as a subgraph."
+      - "A supervisor/orchestrator agent is a StateGraph whose nodes are the specialist subgraphs, wired with conditional edges that route by the supervisor LLM's decision. This is the 'supervisor -> router graph' mapping."
+      - "The compiled graph is a MODULE-LEVEL variable so langgraph.json can point at `src/graphs/{id}.py:graph`. Bind the checkpointer at compile: `graph = builder.compile(checkpointer=...)`."
+      - "The model comes from llm/router.py get_model() (init_chat_model + with_fallbacks), so the agent is not pinned to one endpoint. Architectural default: groq/openai/gpt-oss-120b."
+      - "A boundary box grouping several components becomes ONE compiled subgraph added as a node in the parent graph — that is the 'boundary -> subgraph' mapping."
+      - "A 'plugin pre'/'guardrails' box around the LLM is a wrapper NODE placed before the model node (src/guardrails_pre.py); a 'redaction'/'plugin post' box is a wrapper node after it (src/redaction_post.py); a human-in-the-loop actor is interrupt_before=[node]."
+      - "DIAGRAM MAPPING (SME corrections): a box typed as an agent stays an agent even when the extractor labelled it kind:service — build it as a subgraph, do NOT emit it as a bare node stub; an 'LLM' box inside an agent is that agent's model (llm/router.py), not a separate component; an 'LLM-Judge' box is eval/ragas or eval/observability, not a runtime node; a 'guardrails/PII' box is a pre-invoke wrapper node PLUS governance/openscale_monitor.py, never a fake that always passes; a supervisor with specialists is a router StateGraph over their subgraphs."
+    must_not:
+      - "Never leave the compiled graph inside a function. langgraph.json imports the module and reads the attribute at import time; a graph built in main() is invisible to the manifest."
+      - "Never add the checkpointer or store as a node. They are compile() arguments — see src/checkpointer.py."
+      - "Never hardcode a model endpoint or API key here. Get the model from llm/router.py; keys come from the environment."
+      - "Never emit an LLM-Judge or a guardrail box as an ordinary specialist node that silently passes. A guardrail node blocks loudly; a judge is an evaluation-time construct."
+
+  # --- tool -> @tool function ------------------------------------------------
+  - for_kind: tool
+    path: "src/tools/{id}.py"
+    format: python
+    template: templates/tool.py
+    evidence: "[DOC] langchain_core.tools.tool decorator, bound to the model with model.bind_tools([...]) or passed to create_react_agent — LangChain documentation."
+    schema_facts:
+      - "A tool is a plain function decorated with @tool from langchain_core.tools. The docstring and the type hints ARE the schema the model reads to choose and call it."
+      - "Every argument gets a type hint and an Args: section in the docstring; the return is typed. An untyped argument is one the model has to guess."
+      - "Tools are collected into a list and passed to create_react_agent(model, tools=[...]) or model.bind_tools([...]). They are not added as graph nodes themselves — the ToolNode / react loop calls them."
+      - "Credentials and endpoints come from the environment at call time, never from a literal in the file."
+    must_not:
+      - "Never hardcode a key, token or password, and never read one from a literal default in os.getenv(\"X\", \"sk-...\")."
+      - "Never leave a `pass` or a fabricated return. An unimplemented tool raises NotImplementedError naming the AIR id and the missing contract, never a plausible fake payload."
+      - "Never invent an external endpoint or its payload shape. Unknown contract means a NotImplementedError, not a guessed URL."
+
+  # --- knowledge_base -> retriever tool -------------------------------------
+  - for_kind: knowledge_base
+    path: "src/tools/{id}_retriever.py"
+    format: python
+    template: templates/retriever.py
+    evidence: "[DOC] A knowledge base is a vector store exposed as a retriever tool (retriever.as_tool / a @tool wrapping similarity_search) that the agent calls — LangChain documentation."
+    schema_facts:
+      - "A knowledge base becomes a retriever exposed as a tool the agent can call, not a graph node with an edge into it. The vector store client is configured from the environment."
+      - "The retriever tool returns the retrieved chunks as text the model reasons over; RAG quality is scored separately in eval/ragas."
+    must_not:
+      - "Never invent the vector-store connection details or embeddings model. Unknown index means a NotImplementedError naming the AIR id, not a guessed collection name."
+      - "Never ship a retriever over an empty/unprovisioned index and call it done — an empty index answers every question with silence and the model gets blamed."
+
+  # --- database -> checkpointer (NOT a node) --------------------------------
+  - for_kind: database
+    path: "src/checkpointer.py"
+    format: python
+    template: templates/checkpointer.py
+    evidence: "[INF] Profile mapping decision, and the one that matters most: persistence is infrastructure the graph is configured with, not a step in the flow."
+    schema_facts:
+      - "A database in an agentic drawing is almost always the checkpointer (thread/short-term state) or the store (long-term memory). It is passed to builder.compile(checkpointer=..., store=...), NOT added with add_node."
+      - "MemorySaver is the honest prototype default (state lives in process, loss is obvious); PostgresSaver/SqliteSaver is the durable one, built from a connection string in the environment."
+      - "This module exposes a factory (get_checkpointer()) the graph modules import at compile time — the DB handle never travels in the state."
+    must_not:
+      - "Never generate a node called `database` with an edge into it. That models a query as a step in the conversation and produces a graph that looks right and reasons wrong."
+      - "Never hardcode the connection string. Read it from the environment; MemorySaver when it is absent so the prototype still runs."
+
+  # --- cache -> store (NOT a node) ------------------------------------------
+  - for_kind: cache
+    path: "src/checkpointer.py"
+    format: python
+    template: templates/checkpointer.py
+    evidence: "[INF] Profile mapping decision: a cache in an agentic drawing is the long-term store or a memory layer, configured at compile(), not a node in the flow."
+    schema_facts:
+      - "A cache maps to the graph's store (langgraph BaseStore) or an InMemoryStore for cross-thread memory, passed to compile(store=...). It shares the checkpointer module because both are compile-time persistence, not steps."
+    must_not:
+      - "Never model the cache as a node the flow reads from and writes to. Cache reads are node-internal or the store, not graph edges."
+
+  # --- SME AgentOps / governance layer --------------------------------------
+  - for_kind: project
+    path: "src/guardrails_pre.py"
+    format: python
+    template: templates/guardrails_pre.py
+    evidence: "[INF] A 'plugin pre'/'guardrails/PII' box around the LLM is a wrapper NODE placed before the model node (or interrupt_before for HITL). This mirrors the ADK agent_pre_invoke plugin."
+    schema_facts:
+      - "The guardrail is a node that runs BEFORE the model node: it validates or enriches the state and may BLOCK the turn by routing to a refusal/END instead of the model."
+      - "For a human-in-the-loop checkpoint, prefer interrupt_before=[<model_node>] at compile() over a busy-wait node."
+      - "Where the guardrail depends on a real classifier/governance service the drawing only named, it calls governance/openscale_monitor.py and raises loudly rather than passing silently."
+    must_not:
+      - "Never fake a guardrail that always returns 'safe'. A governance hook that cannot be wired raises NotImplementedError naming the AIR id and the missing endpoint."
+      - "Never emit this as a tool the model may choose to skip. A guardrail is a node ON the path, not an optional tool."
+
+  - for_kind: project
+    path: "src/redaction_post.py"
+    format: python
+    template: templates/redaction_post.py
+    evidence: "[INF] A 'redaction'/'plugin post'/'LLM-Judge inline' box after the LLM is a wrapper NODE placed after the model node. This mirrors the ADK agent_post_invoke plugin."
+    schema_facts:
+      - "The redaction node runs AFTER the model node and reshapes or redacts the output in the state before it reaches the user (PII masking, price/PII redaction)."
+      - "It returns a partial state update to the output/messages channel; it does not call the model again unless the drawing shows a judge-and-revise loop."
+    must_not:
+      - "Never let a redaction gap pass silently. If the redaction rule depends on a service not in scope, raise NotImplementedError naming the AIR id, do not return the raw output."
+
+  - for_kind: project
+    path: "llm/router.py"
+    format: python
+    template: templates/llm_router.py
+    evidence: "[DOC] langchain.chat_models.init_chat_model + Runnable.with_fallbacks — this is the 'API gateway for multiple LLMs', a router with primary + fallbacks, not a graph node."
+    schema_facts:
+      - "get_model() builds the chat model with init_chat_model and attaches fallbacks with .with_fallbacks([...]), so an agent survives one provider being down. This is the multi-LLM gateway from the drawing, expressed as a Runnable, not a component the graph calls."
+      - "The primary is the architectural default groq/openai/gpt-oss-120b: init_chat_model('openai/gpt-oss-120b', model_provider='groq'). Fallbacks are the backup models the drawing names."
+      - "Every model here is created from environment credentials; the module exposes one get_model() the graphs import."
+    must_not:
+      - "Never model the LLM router as a separate gateway node/edge in the graph. In LangChain it is a Runnable with fallbacks referenced by the agents, not a box they route through."
+      - "Never hardcode an API key. init_chat_model reads provider credentials from the environment."
+      - "Never default to a legacy watsonx granite id. The architectural default is groq/openai/gpt-oss-120b unless the AIR names a model per agent."
+
+  - for_kind: project
+    path: "eval/ragas/evaluate_rag.py"
+    format: python
+    template: templates/ragas_evaluate.py
+    evidence: "[DOC] RAGAS scores retrieval quality (faithfulness, relevancy, context precision/recall) that graph-level evaluation does not."
+    schema_facts:
+      - "Emit ONLY when the drawing has a knowledge base or a retrieval step. Without RAG it is noise."
+      - "Build the samples from the graph's traces over the evaluation set: rows of {question, answer, contexts, ground_truth}. A low faithfulness score means the agent answered from the model, not the retrieved context."
+    must_not:
+      - "Never run RAGAS on an empty sample set and call it validated — an empty run proves nothing."
+
+  - for_kind: project
+    path: "eval/observability.py"
+    format: python
+    template: templates/observability.py
+    evidence: "[DOC] LangSmith (LANGCHAIN_TRACING_V2) and Langfuse (CallbackHandler) trace every graph run; the 'LLM-Judge' box's runtime home is here, not a graph node."
+    schema_facts:
+      - "Tracing is enabled by ENVIRONMENT (LANGCHAIN_TRACING_V2 / LANGCHAIN_API_KEY for LangSmith, or a Langfuse CallbackHandler passed in config). This module wires the handler and reads names, never keys, from code."
+      - "An 'LLM-Judge' box is an offline/online evaluator over traces (LangSmith evaluators or a Langfuse score), not a node on the request path."
+    must_not:
+      - "Never hardcode a LangSmith/Langfuse key. Read every credential from the environment; the module only decides whether tracing is on."
+
+  - for_kind: project
+    path: "governance/openscale_monitor.py"
+    format: python
+    template: templates/openscale_monitor.py
+    evidence: "[INF] watsonx.governance / OpenScale placeholder — payload logging and quality/drift/PII monitors. Placeholder by design; the AIR keeps the endpoint out of scope."
+    schema_facts:
+      - "Emit when the drawing shows governance / guardrails / PII / monitoring. It is a loud NotImplementedError stub reading its endpoint from the environment, never an invented API shape. The guardrail nodes call into it."
+    must_not:
+      - "Never generate a plausible-looking governance call with a guessed endpoint or a hardcoded key. A visible gap beats a silent fake."
+
+  # --- packaging & docs -----------------------------------------------------
+  - for_kind: project
+    path: "pyproject.toml"
+    format: toml
+    template: templates/pyproject.toml
+    evidence: "[DOC] `dependencies: [\".\"]` in the manifest means the local project is installed, so it needs a real package definition."
+    schema_facts:
+      - "A PEP 621 [project] table with name, version, requires-python and dependencies. langgraph and langchain are always dependencies; langgraph-checkpoint-postgres, ragas, langfuse and provider packages (langchain-groq) are added only when the drawing uses them."
+      - "requires-python matches the python_version parameter and the manifest's python_version."
+    must_not:
+      - "Never list a dependency the code does not import. langgraph build fails to resolve a phantom package."
+
+  - for_kind: project
+    path: "README.md"
+    format: markdown
+    template: templates/README.md
+    evidence: "[INF] Every generated project states how to run it, which drawing it came from, and the AIR-to-graph mapping so a reviewer can check the topology."
+    schema_facts:
+      - "State the run order: install (pip install -e .), set the environment (model + checkpointer + tracing keys), `langgraph dev` or invoke the graph, then `langgraph build` to validate the manifest."
+      - "Carry the AIR-to-graph mapping table (service->node, gateway->conditional edge, database/cache->checkpointer/store, agent->subgraph, boundary->subgraph) so the topology can be checked against the drawing."
+
+# -----------------------------------------------------------------------------
+parameters:
+  - title: "Runtime"
+    required: [python_version]
+    properties:
+      python_version: {type: string, default: "3.11"}
+      graph_id: {type: string, default: "agent", description: "Key under `graphs` in langgraph.json, mapping to src/graphs/<entry>.py:graph."}
+      recursion_limit:
+        type: integer
+        default: 25
+        description: "Max hops before LangGraph raises. A graph with no path to END hits this and looks like a model failure."
+  - title: "Model"
+    required: [llm]
+    properties:
+      llm:
+        type: string
+        default: "groq/openai/gpt-oss-120b"
+        description: "Architectural default for every agent, expressed to init_chat_model as model='openai/gpt-oss-120b', model_provider='groq'. Do not fall back to legacy watsonx granite ids unless the AIR names a model per agent."
+      fallback_llm:
+        type: string
+        default: ""
+        advanced: true
+        description: "Optional secondary model wired with .with_fallbacks in llm/router.py when the drawing shows a primary+backup or an LLM gateway."
+  - title: "Persistence"
+    advanced: true
+    properties:
+      checkpointer:
+        type: string
+        enum: [memory, sqlite, postgres, none]
+        default: memory
+        description: "memory is the honest default for a prototype: it makes state loss obvious instead of hiding it behind a database that was never provisioned."
+      store:
+        type: string
+        enum: [none, memory, postgres]
+        default: none
+        description: "Long-term cross-thread memory (a cache box in the drawing). none unless the drawing shows one."
+  - title: "AgentOps and governance"
+    advanced: true
+    properties:
+      guardrails:
+        type: boolean
+        default: false
+        description: "Emit src/guardrails_pre.py and src/redaction_post.py wrapper nodes when the drawing shows a guardrails/PII or redaction box."
+      observability:
+        type: string
+        enum: [none, langsmith, langfuse]
+        default: none
+        description: "Where graph traces go. langsmith via env vars, langfuse via a CallbackHandler."
+      ragas_enabled:
+        type: boolean
+        default: false
+        description: "Emit eval/ragas when a knowledge base or retrieval step is present."
+
+inference_rules:
+  - {param: python_version, from: "experiment_plan.stack.runtime", when_absent: default, default: "3.11"}
+  - {param: llm, from: "experiment_plan.stack.llm", when_absent: default, default: "groq/openai/gpt-oss-120b"}
+  - {param: checkpointer, from: "experiment_plan.stack.checkpointer", when_absent: default, default: "memory"}
+  - {param: observability, from: "experiment_plan.stack.observability", when_absent: default, default: "none"}
+  - {param: output_language, from: "meta.output_language", when_absent: default, default: "en"}
+  - param: entrypoint
+    from: "meta.entry_agent"
+    when_absent: ask
+    question: "Which component is the graph's entry point — where does add_edge(START, ...) point?"
+    blocking: true
+
+questions:
+  - id: q_entrypoint
+    param: entrypoint
+    when: {always: true}
+    question: "Which component is the graph's entry point — where does a run start?"
+    blocking: true
+    why: "add_edge(START, ...) has to point somewhere. Guess it and every run starts in the middle of the flow."
+  - id: q_terminal
+    param: terminal_nodes
+    when: {always: true}
+    question: "Which components end a run? Anything not listed keeps routing."
+    blocking: true
+    why: "A graph with no path to END runs until the recursion limit and then raises. It looks like a model failure and it is a topology failure."
+  - id: q_state_shape
+    param: state_keys
+    when: {always: true}
+    question: "What does the state carry between nodes — which keys, and which of them accumulate (add_messages / operator.add) rather than being overwritten?"
+    blocking: true
+    why: "The reducer choice is invisible in a drawing and decides whether messages accumulate or overwrite each other. Getting it wrong silently drops history."
+  - id: q_supervisor
+    param: supervisor
+    when: {has_component_kind: agent}
+    question: "Is one agent a supervisor that routes to the others, or do the agents form a linear/branching pipeline?"
+    options: ["one supervisor over specialists", "linear pipeline", "branching by a gateway"]
+    blocking: false
+    why: "A supervisor becomes a router StateGraph over subgraphs; a pipeline becomes plain edges. Guessing supervisor where there is none adds a routing LLM call to every turn."
+  - id: q_interrupt
+    param: interrupt_before
+    when: {has_component_kind: actor}
+    question: "Where should the graph stop and wait for the human — before which node (interrupt_before)?"
+    options: ["nowhere, run end to end", "before every write operation", "at a specific node"]
+    blocking: false
+    why: "An actor in the drawing usually means a human in the loop. Without an interrupt the graph decides on their behalf."
+  - id: q_guardrails
+    param: guardrails
+    when: {always: true}
+    question: "Does any box draw guardrails / PII filtering / output redaction around an agent's LLM?"
+    options: ["no", "pre-model guardrail", "post-model redaction", "both"]
+    blocking: false
+    why: "A guardrail is a wrapper node on the path plus a governance placeholder. Missed, it never runs; faked, it always passes — either way the compliance requirement is silently gone."
+
+phases:
+  analyze: inherit
+  plan: inherit
+  scaffold: override
+  validate: decorate
+
+bob_modes:
+  scaffold: {slug: arch-scaffold, approval_mode: yolo, cwd: "{project_root}"}
+  validate: {slug: arch-validator, approval_mode: auto_edit, cwd: "{project_root}"}
+
+templates: templates/
+
+validate:
+  level: structural-only
+  level_reason: "langgraph is NOT installed on this machine, so `langgraph build` cannot run and nothing offline proves the manifest points at a real compiled graph. What CAN run is py_compile on the graph code and a stdlib json.load structural check on the manifest — syntax and shape, not semantics. Install langgraph-cli to raise this to full."
+  checks:
+    - name: py-syntax
+      cmd: "python3 -m py_compile {files:src/**/*.py} {files:llm/*.py} {files:eval/**/*.py} {files:governance/*.py}"
+      requires: [{binary: python3}]
+      confidence: "[VER] py_compile is stdlib and catches every syntax error in the generated graph, node, tool and governance code."
+      degrade: "No Python interpreter: the graph code is not parsed at all."
+      blocking: true
+    - name: manifest-json
+      cmd: "python3 -c \"import json,sys; d=json.load(open('langgraph.json')); sys.exit(0 if d.get('graphs') and d.get('dependencies') else 1)\""
+      requires: [{binary: python3}]
+      confidence: "[INF] Structural check written here: valid JSON with non-empty graphs and dependencies. It is NOT the framework's validator and cannot see whether the graph attribute exists."
+      degrade: "Not applicable — stdlib only."
+      blocking: true
+    - name: langgraph-build
+      cmd: "langgraph build --help >/dev/null && langgraph build -t arch2code-validate ."
+      requires: [{binary: langgraph}]
+      confidence: "[DOC] `langgraph build` validates the manifest, including required keys and that each graph attribute resolves to a compiled graph."
+      degrade: "langgraph is NOT installed here, so the manifest is only checked for JSON structure. A manifest that points at a graph attribute which does not exist would pass. `pip install langgraph-cli`."
+      blocking: false
+    - name: ruff
+      cmd: "ruff check src/ llm/ eval/ governance/"
+      requires: [{binary: ruff}]
+      confidence: "[VER] ruff is installed on this machine."
+      degrade: "Skipping lint: undefined names in node bodies survive to the first run. `pip install ruff`."
+      blocking: false
